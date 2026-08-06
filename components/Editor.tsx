@@ -395,7 +395,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         </button>
         <span className="w-px h-5 bg-[var(--border)]" />
         <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${panel === "journeys" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
-                onClick={() => setPanel(panel === "journeys" ? null : "journeys")} title="Personas & journeys">
+                onClick={() => setPanel(panel === "journeys" ? null : "journeys")} title="Intents & journeys">
           {ICONS.route}<span className="hidden sm:inline">Journeys</span>
         </button>
         <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
@@ -743,7 +743,7 @@ function StoryboardModal({ journey, persona, pages, patchJourney, patchStep, onC
           <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: color }} />
           <input className="text-lg font-bold bg-transparent outline-none min-w-0 flex-1" value={journey.name}
                  onChange={e => patchJourney(journey.id, { name: e.target.value })} />
-          <span className="tk text-[11px] text-[var(--muted)] shrink-0">{persona?.name ?? "no persona"}</span>
+          <span className="tk text-[11px] text-[var(--muted)] shrink-0">{persona?.name ?? "no intent"}</span>
           <CopyBtn text={journeyToText(journey, persona?.name ?? "", pageName)} label="Copy" />
           <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
         </div>
@@ -815,24 +815,24 @@ function JourneysPanel({ doc, active, setActive, recording, setRecording, addPer
   return (
     <aside className="panel absolute top-[68px] right-4 bottom-4 w-[360px] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden z-30">
       <div className="flex items-center px-4 py-2.5 border-b border-[var(--border)]">
-        <div className="text-sm font-bold text-[var(--accent)]">Personas & journeys</div>
+        <div className="text-sm font-bold text-[var(--accent)]">Intents & journeys</div>
         <button className="ml-auto text-[var(--muted)] hover:text-[var(--ink)]" onClick={close}>{ICONS.close}</button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-5 text-[13px]">
         <div>
-          <div className="tk text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-2">Personas</div>
+          <div className="tk text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-2">Intents</div>
           <div className="space-y-1.5 mb-2">
             {doc.personas.map(p => (
               <div key={p.id} className="flex items-center gap-2 border border-[var(--border)] rounded-xl px-3 py-1.5" title={p.desc}>
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
                 <span className="flex-1 truncate font-medium">{p.name}</span>
-                <button className="text-[var(--muted)] hover:text-red-500" title="Delete persona and its journeys"
-                        onClick={() => { if (confirm(`Delete persona "${p.name}" and its journeys?`)) deletePersona(p.id); }}>{ICONS.trash}</button>
+                <button className="text-[var(--muted)] hover:text-red-500" title="Delete intent and its journeys"
+                        onClick={() => { if (confirm(`Delete intent "${p.name}" and its journeys?`)) deletePersona(p.id); }}>{ICONS.trash}</button>
               </div>
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <input className="flex-1 border border-[var(--border)] rounded-full px-3 py-1.5 bg-transparent text-[12.5px]" placeholder="New persona…"
+            <input className="flex-1 border border-[var(--border)] rounded-full px-3 py-1.5 bg-transparent text-[12.5px]" placeholder="New intent…"
                    value={pName} onChange={e => setPName(e.target.value)} />
             <div className="flex gap-1">
               {PERSONA_COLORS.map(c => (
@@ -888,7 +888,7 @@ function JourneysPanel({ doc, active, setActive, recording, setRecording, addPer
                    value={jName} onChange={e => setJName(e.target.value)} />
             <select className="border border-[var(--border)] rounded-full px-2 py-1.5 bg-transparent text-[12px] max-w-[110px]"
                     value={jPersona} onChange={e => setJPersona(e.target.value)}>
-              <option value="">persona…</option>
+              <option value="">intent…</option>
               {doc.personas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <button className="px-2.5 py-1.5 rounded-full bg-[var(--accent)] text-white text-[12px] shrink-0"
