@@ -154,11 +154,11 @@ export default function Editor({ projectId }: { projectId: string }) {
     <div className="h-screen relative bg-[var(--bg)] text-[var(--ink)]">
       <header className="absolute top-3 left-3 right-3 z-20 flex items-center gap-3 pl-5 pr-2 py-2 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
         <a href="/" title="All projects" aria-label="All projects" className="flex items-center gap-2 text-[var(--accent)]"><LogoMark /><span className="font-semibold tracking-tight text-[13px] text-[var(--ink)]">Scaffold</span></a>
-        <input className="font-semibold text-[15px] bg-transparent outline-none min-w-[300px]" value={doc.name}
+        <input className="font-semibold text-[15px] bg-transparent outline-none flex-1 min-w-[110px]" value={doc.name}
                onChange={e => mutate(d => { d.name = e.target.value; return d; })} />
-        <span className="tk text-[11px] text-[var(--muted)]">{status}{doc.updatedBy && status === "saved" ? ` · last edit ${doc.updatedBy}` : ""}</span>
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => addChildPage(null)}>+ Top-level page</button>
+        <span className="tk text-[11px] text-[var(--muted)] hidden lg:inline whitespace-nowrap truncate max-w-[240px]">{status}{doc.updatedBy && status === "saved" ? ` · last edit ${doc.updatedBy}` : ""}</span>
+        <div className="ml-auto flex items-center gap-2 text-xs whitespace-nowrap">
+          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)] whitespace-nowrap hidden sm:block" onClick={() => addChildPage(null)}>+ Top-level page</button>
           <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={async () => {
             const node = canvasRef.current?.querySelector(".tree") as HTMLElement | null;
             if (!node || !docRef.current) return;
@@ -176,7 +176,7 @@ export default function Editor({ projectId }: { projectId: string }) {
           </div>
           <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="Shown to teammates on your edits">{(me || "??").slice(0, 2).toUpperCase()}</span>
           <ThemeToggle />
-          <input className="border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
+          <input className="border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent hidden md:block" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
         </div>
       </header>
 
