@@ -25,15 +25,32 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* octopus-style tree connectors */
+/* ---------- Scaffold design tokens ---------- */
+:root{
+  --bg:#f4f6fa; --grid:#e4e9f1; --glass:rgba(255,255,255,.62); --panel:rgba(255,255,255,.72);
+  --card:#ffffff; --card-border:rgba(59,130,246,.65);
+  --border:rgba(15,23,42,.12); --hover:rgba(15,23,42,.05);
+  --ink:#0f172a; --muted:#64748b; --accent:#2563eb; --connector:#a6b3c6;
+}
+html[data-theme="dark"]{
+  --bg:#0b0f17; --grid:#151c29; --glass:rgba(15,20,31,.55); --panel:rgba(15,20,31,.78);
+  --card:#121828; --card-border:rgba(96,165,250,.5);
+  --border:rgba(148,163,184,.18); --hover:rgba(148,163,184,.08);
+  --ink:#e2e8f0; --muted:#7c8aa0; --accent:#60a5fa; --connector:#333f52;
+}
+html,body{background:var(--bg);}
+body{font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,sans-serif;}
+.font-mono,.tk{font-family:var(--font-geist-mono),ui-monospace,SFMono-Regular,monospace;}
+
+/* tree connectors */
 .tree ul{display:flex;justify-content:center;padding-top:22px;margin:0;position:relative}
 .tree li{list-style:none;padding:22px 10px 0;display:flex;flex-direction:column;align-items:center;position:relative}
-.tree li::before,.tree li::after{content:'';position:absolute;top:0;right:50%;border-top:2px solid #94a3b8;width:50%;height:22px}
-.tree li::after{right:auto;left:50%;border-left:2px solid #94a3b8}
+.tree li::before,.tree li::after{content:'';position:absolute;top:0;right:50%;border-top:2px solid var(--connector);width:50%;height:22px}
+.tree li::after{right:auto;left:50%;border-left:2px solid var(--connector)}
 .tree li:only-child::after,.tree li:only-child::before{display:none}
 .tree li:first-child::before,.tree li:last-child::after{border:0 none}
-.tree li:last-child::before{border-right:2px solid #94a3b8;border-radius:0 8px 0 0}
+.tree li:last-child::before{border-right:2px solid var(--connector);border-radius:0 8px 0 0}
 .tree li:first-child::after{border-radius:8px 0 0 0}
-.tree ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid #94a3b8;width:0;height:22px}
+.tree ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--connector);width:0;height:22px}
 .tree>ul{padding-top:0}
 .tree>ul>li::after,.tree>ul>li::before{display:none}

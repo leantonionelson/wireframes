@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { COLOR_STYLES, type Block, type ColorRole, type Doc, type GlyphId, type Page, blankBlock, uid } from "@/lib/model";
 import { GLYPHS, Glyph } from "@/lib/glyphs";
+import { LogoMark, ThemeToggle } from "@/components/Theme";
 
 type Sel = { pageId: string; blockId?: string } | null;
 
@@ -18,9 +19,9 @@ export default function Editor({ projectId }: { projectId: string }) {
 
   // identity for collaboration attribution (editable in the header)
   useEffect(() => {
-    setMe(localStorage.getItem("octo.name") || "anon");
+    setMe(localStorage.getItem("scaffold.name") || localStorage.getItem("octo.name") || "anon");
   }, []);
-  const changeMe = (n: string) => { setMe(n); localStorage.setItem("octo.name", n); };
+  const changeMe = (n: string) => { setMe(n); localStorage.setItem("scaffold.name", n); };
 
   // initial load + poll for teammates' changes
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       if (!d) return;
       setStatus("saving");
       const res = await fetch("/api/doc", { method: "PUT", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ baseRev: d.rev, doc: d, by: localStorage.getItem("octo.name") || "anon" }) });
+        body: JSON.stringify({ baseRev: d.rev, doc: d, by: localStorage.getItem("scaffold.name") || localStorage.getItem("octo.name") || "anon" }) });
       const j = await res.json();
       if (res.ok) { setDoc(j.doc); setDirty(false); setStatus("saved"); }
       else { setDoc(j.doc); setDirty(false); setStatus("updated by " + (j.doc.updatedBy || "teammate") + ", your last change re-applied manually if needed"); }
@@ -96,7 +97,7 @@ export default function Editor({ projectId }: { projectId: string }) {
     return m;
   }, [doc]);
 
-  if (!doc) return <div className="p-10 text-sm text-neutral-500">Loading…</div>;
+  if (!doc) return <div className="p-10 text-sm text-[var(--muted)]">Loading…</div>;
 
   const selPage = sel ? doc.pages.find(p => p.id === sel.pageId) ?? null : null;
   const selBlock = selPage && sel?.blockId ? selPage.blocks.find(b => b.id === sel.blockId) ?? null : null;
@@ -148,34 +149,39 @@ export default function Editor({ projectId }: { projectId: string }) {
   const roots = childrenOf.get(null) ?? [];
 
   return (
-    <div className="h-screen flex flex-col bg-[#eef1f6] text-neutral-900">
-      <header className="flex items-center gap-4 px-5 py-2.5 bg-white border-b border-neutral-200 z-10">
-        <a href="/" className="text-lg" title="All projects" aria-label="All projects">🐙</a>
+    <div className="h-screen flex flex-col bg-[var(--bg)] text-[var(--ink)]">
+      <header className="flex items-center gap-3 px-5 py-2.5 bg-[var(--glass)] backdrop-blur-xl border-b border-[var(--border)] z-10">
+        <a href="/" title="All projects" aria-label="All projects" className="flex items-center gap-2 text-[var(--accent)]"><LogoMark /><span className="font-semibold tracking-tight text-[13px] text-[var(--ink)]">Scaffold</span></a>
         <input className="font-semibold text-[15px] bg-transparent outline-none min-w-[300px]" value={doc.name}
                onChange={e => mutate(d => { d.name = e.target.value; return d; })} />
-        <span className="text-xs text-neutral-400">{status}{doc.updatedBy && status === "saved" ? ` · last edit ${doc.updatedBy}` : ""}</span>
+        <span className="tk text-[11px] text-[var(--muted)]">{status}{doc.updatedBy && status === "saved" ? ` · last edit ${doc.updatedBy}` : ""}</span>
         <div className="ml-auto flex items-center gap-2 text-xs">
-          <button className="px-2 py-1 border rounded" onClick={() => addChildPage(null)}>+ Top-level page</button>
-          <button className="px-2 py-1 border rounded" onClick={async () => {
+          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => addChildPage(null)}>+ Top-level page</button>
+          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={async () => {
             const node = canvasRef.current?.querySelector(".tree") as HTMLElement | null;
             if (!node || !docRef.current) return;
             const { toPng } = await import("html-to-image");
-            const url = await toPng(node, { backgroundColor: "#eef1f6", pixelRatio: 2 });
+            const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#f4f6fa";
+            const url = await toPng(node, { backgroundColor: bg, pixelRatio: 2 });
             const a = document.createElement("a");
             a.href = url; a.download = `${docRef.current.name.replace(/[^\w-]+/g, "_")}.png`; a.click();
           }}>Export PNG</button>
-          <button className="px-2 py-1 border rounded" onClick={() => setView({ x: 60, y: 40, k: 0.8 })}>Fit</button>
-          <button className="px-2 py-1 border rounded" onClick={() => setView(v => ({ ...v, k: Math.max(0.25, v.k * 0.9) }))}>−</button>
-          <button className="px-2 py-1 border rounded" onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.1) }))}>+</button>
+          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => setView({ x: 60, y: 40, k: 0.8 })}>Fit</button>
+          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => setView(v => ({ ...v, k: Math.max(0.25, v.k * 0.9) }))}>−</button>
+          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.1) }))}>+</button>
           <span className="w-9 text-center tabular-nums">{Math.round(view.k * 100)}%</span>
-          <span className="px-2 py-1 rounded-full bg-lime-400 text-[11px] font-bold" title="Shown to teammates on your edits">{(me || "??").slice(0, 2).toUpperCase()}</span>
-          <input className="border rounded px-2 py-1 w-24" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
+          <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="Shown to teammates on your edits">{(me || "??").slice(0, 2).toUpperCase()}</span>
+          <ThemeToggle />
+          <input className="border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
         </div>
       </header>
 
       <div className="flex-1 relative overflow-hidden" ref={canvasRef}
            onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onWheel={onWheel}
-           style={{ cursor: drag.current ? "grabbing" : "grab" }}>
+           style={{ cursor: drag.current ? "grabbing" : "grab",
+             backgroundImage: "linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px)",
+             backgroundSize: `${24 * view.k}px ${24 * view.k}px`,
+             backgroundPosition: `${view.x}px ${view.y}px` }}>
         <div style={{ transform: `translate(${view.x}px,${view.y}px) scale(${view.k})`, transformOrigin: "0 0", width: "max-content" }}>
           <div className="tree px-10 py-8"><ul>{roots.map(renderPage)}</ul></div>
         </div>
@@ -198,10 +204,10 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild, del }: {
 }) {
   const active = sel?.pageId === page.id;
   return (
-    <div className={`card w-[230px] rounded-lg bg-white border-2 ${page.external ? "border-dashed border-neutral-400" : active ? "border-blue-600" : "border-blue-500/70"} shadow-sm`}
+    <div className={`card w-[230px] rounded-xl bg-[var(--card)] border-2 ${page.external ? "border-dashed border-[var(--muted)]" : active ? "border-[var(--accent)]" : "border-[var(--card-border)]"} shadow-sm`}
          onClick={e => { e.stopPropagation(); if (!(e.target as HTMLElement).closest(".blk")) setSel({ pageId: page.id }); }}>
       <div className="flex items-center gap-1 px-2 pt-1.5">
-        <input className="w-full text-center font-bold text-[12.5px] text-blue-700 outline-none bg-transparent"
+        <input className="w-full text-center font-bold text-[12.5px] text-[var(--accent)] outline-none bg-transparent"
                value={page.name} onChange={e => rename(page.id, e.target.value)} onClick={e => e.stopPropagation()} />
       </div>
       <div className="p-1.5 pt-1 flex flex-col gap-1">
@@ -223,11 +229,11 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild, del }: {
           );
         })}
         <div className="flex gap-1">
-          <button className="flex-1 text-[10.5px] text-neutral-400 hover:text-blue-600 border border-dashed border-neutral-300 rounded py-0.5"
+          <button className="flex-1 text-[10.5px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
                   onClick={e => { e.stopPropagation(); addBlock(page.id); }}>+ block</button>
-          <button className="text-[10.5px] text-neutral-400 hover:text-blue-600 border border-dashed border-neutral-300 rounded px-1.5"
+          <button className="text-[10.5px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full px-2"
                   title="Add child page" onClick={e => { e.stopPropagation(); addChild(page.id); }}>+ page</button>
-          <button className="text-[10.5px] text-neutral-400 hover:text-red-600 border border-dashed border-neutral-300 rounded px-1.5"
+          <button className="text-[10.5px] text-[var(--muted)] hover:text-red-500 border border-dashed border-[var(--border)] rounded-full px-2"
                   title="Delete page and children" onClick={e => { e.stopPropagation(); if (confirm(`Delete "${page.name}" and its children?`)) del(page.id); }}>🗑</button>
         </div>
       </div>
@@ -245,32 +251,32 @@ function Inspector({ page, block, me, close, setPageNote, patchBlock, moveBlock,
 }) {
   const [draft, setDraft] = useState("");
   return (
-    <aside className="panel absolute top-3 right-3 bottom-3 w-[360px] bg-white rounded-xl shadow-xl border border-neutral-200 flex flex-col overflow-hidden">
-      <div className="flex items-center px-4 py-2.5 border-b border-neutral-100">
-        <div className="text-sm font-bold text-blue-700 truncate">{page.name}{block ? ` · ${block.label}` : ""}</div>
-        <button className="ml-auto text-neutral-400 hover:text-neutral-700" onClick={close}>✕</button>
+    <aside className="panel absolute top-3 right-3 bottom-3 w-[360px] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden">
+      <div className="flex items-center px-4 py-2.5 border-b border-[var(--border)]">
+        <div className="text-sm font-bold text-[var(--accent)] truncate">{page.name}{block ? ` · ${block.label}` : ""}</div>
+        <button className="ml-auto text-[var(--muted)] hover:text-[var(--ink)]" onClick={close}>✕</button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[13px]">
         {!block && (
           <>
             <Field label="Page note">
-              <textarea className="w-full border rounded p-2 min-h-[180px]" value={page.note}
+              <textarea className="w-full border border-[var(--border)] rounded-lg p-2 min-h-[180px] bg-transparent" value={page.note}
                         onChange={e => setPageNote(page.id, e.target.value)} />
             </Field>
-            <p className="text-neutral-400 text-xs">Select a block on the card to edit its label, wireframe, colour, notes and comments.</p>
+            <p className="text-[var(--muted)] text-xs">Select a block on the card to edit its label, wireframe, colour, notes and comments.</p>
           </>
         )}
         {block && (
           <>
             <Field label="Label">
-              <input className="w-full border rounded p-2" value={block.label}
+              <input className="w-full border border-[var(--border)] rounded-lg p-2 bg-transparent" value={block.label}
                      onChange={e => patchBlock(page.id, block.id, { label: e.target.value })} />
             </Field>
             <Field label="Wireframe">
               <div className="grid grid-cols-4 gap-1">
                 {(Object.keys(GLYPHS) as GlyphId[]).map(g => (
                   <button key={g} title={GLYPHS[g].name}
-                          className={`border rounded p-1 text-blue-600 ${block.glyph === g ? "border-blue-600 bg-blue-50" : "border-neutral-200"}`}
+                          className={`border rounded-lg p-1 text-[var(--accent)] ${block.glyph === g ? "border-[var(--accent)] bg-[var(--hover)]" : "border-[var(--border)]"}`}
                           onClick={() => patchBlock(page.id, block.id, { glyph: g })}>
                     {GLYPHS[g].el}
                   </button>
@@ -281,42 +287,42 @@ function Inspector({ page, block, me, close, setPageNote, patchBlock, moveBlock,
               <div className="flex gap-1.5">
                 {(Object.keys(COLOR_STYLES) as ColorRole[]).map(c => (
                   <button key={c} title={COLOR_STYLES[c].label}
-                          className={`w-7 h-7 rounded ${block.color === c ? "ring-2 ring-offset-1 ring-neutral-700" : ""}`}
+                          className={`w-7 h-7 rounded-full ${block.color === c ? "ring-2 ring-offset-2 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
                           style={{ background: COLOR_STYLES[c].bg }}
                           onClick={() => patchBlock(page.id, block.id, { color: c })} />
                 ))}
               </div>
             </Field>
             <Field label="Component">
-              <input className="w-full border rounded p-2" placeholder="AEM: Promotional Banner"
+              <input className="w-full border border-[var(--border)] rounded-lg p-2 bg-transparent" placeholder="AEM: Promotional Banner"
                      value={block.component} onChange={e => patchBlock(page.id, block.id, { component: e.target.value })} />
             </Field>
             <Field label="Note (purpose, user needs, content status)">
-              <textarea className="w-full border rounded p-2 min-h-[120px]" value={block.note}
+              <textarea className="w-full border border-[var(--border)] rounded-lg p-2 min-h-[120px] bg-transparent" value={block.note}
                         onChange={e => patchBlock(page.id, block.id, { note: e.target.value })} />
             </Field>
             <Field label="Red flag (custom component or pending decision)">
-              <textarea className="w-full border rounded p-2 min-h-[52px] text-red-700" value={block.flag}
+              <textarea className="w-full border border-[var(--border)] rounded-lg p-2 min-h-[52px] bg-transparent text-red-500" value={block.flag}
                         onChange={e => patchBlock(page.id, block.id, { flag: e.target.value })} />
             </Field>
             <div className="flex gap-2">
-              <button className="px-2 py-1 border rounded" onClick={() => moveBlock(page.id, block.id, -1)}>↑ Move up</button>
-              <button className="px-2 py-1 border rounded" onClick={() => moveBlock(page.id, block.id, 1)}>↓ Move down</button>
-              <button className="ml-auto px-2 py-1 border rounded text-red-600" onClick={() => deleteBlock(page.id, block.id)}>Delete</button>
+              <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => moveBlock(page.id, block.id, -1)}>↑ Move up</button>
+              <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => moveBlock(page.id, block.id, 1)}>↓ Move down</button>
+              <button className="ml-auto px-3 py-1 border border-[var(--border)] rounded-full text-red-500 hover:bg-[var(--hover)]" onClick={() => deleteBlock(page.id, block.id)}>Delete</button>
             </div>
             <Field label={`Comments (${block.comments.length})`}>
               <div className="space-y-2">
                 {block.comments.map(c => (
-                  <div key={c.id} className="bg-neutral-50 border border-neutral-100 rounded p-2">
-                    <div className="text-[11px] text-neutral-400">{c.author} · {new Date(c.at).toLocaleString()}</div>
+                  <div key={c.id} className="bg-[var(--hover)] border border-[var(--border)] rounded-lg p-2">
+                    <div className="tk text-[10px] text-[var(--muted)]">{c.author} · {new Date(c.at).toLocaleString()}</div>
                     <div>{c.text}</div>
                   </div>
                 ))}
                 <div className="flex gap-1.5">
-                  <input className="flex-1 border rounded p-2" placeholder={`Comment as ${me}…`} value={draft}
+                  <input className="flex-1 border border-[var(--border)] rounded-full px-3 p-2 bg-transparent" placeholder={`Comment as ${me}…`} value={draft}
                          onChange={e => setDraft(e.target.value)}
                          onKeyDown={e => { if (e.key === "Enter" && draft.trim()) { addComment(page.id, block.id, draft.trim()); setDraft(""); } }} />
-                  <button className="px-2 border rounded" onClick={() => { if (draft.trim()) { addComment(page.id, block.id, draft.trim()); setDraft(""); } }}>Add</button>
+                  <button className="px-3 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => { if (draft.trim()) { addComment(page.id, block.id, draft.trim()); setDraft(""); } }}>Add</button>
                 </div>
               </div>
             </Field>
@@ -330,7 +336,7 @@ function Inspector({ page, block, me, close, setPageNote, patchBlock, moveBlock,
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400 mb-1">{label}</div>
+      <div className="tk text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-1">{label}</div>
       {children}
     </div>
   );

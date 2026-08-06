@@ -1,6 +1,6 @@
-# Octo
+# Scaffold
 
-Collaborative sitemaps and wireframes. Octopus.do-style tree of page cards,
+Collaborative sitemaps and wireframes. Tech-styled, Octopus.do-inspired tree of page cards,
 each a stack of colour-coded wireframe blocks with notes, components, red
 flags and comments. Multi-project, shareable URLs, PNG export.
 
