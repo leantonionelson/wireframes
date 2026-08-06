@@ -767,6 +767,10 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   record: (jid: string) => void;
   onClose: () => void;
 }) {
+  const [zs, setZs] = useState<Record<string, { x: number; k: number }>>({});
+  const zOf = (id: string) => zs[id] ?? { x: 0, k: 1 };
+  const setZFor = (id: string) => (u: { x: number; k: number } | ((v: { x: number; k: number }) => { x: number; k: number })) =>
+    setZs(sp => { const cur = sp[id] ?? { x: 0, k: 1 }; return { ...sp, [id]: typeof u === "function" ? u(cur) : u }; });
   const intent = doc.personas.find(p => p.id === tab) ?? doc.personas[0] ?? null;
   const journeys = intent ? doc.journeys.filter(j => j.personaId === intent.id) : [];
   return (
@@ -813,24 +817,30 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
             </div>
             {journeys.map(j => (
               <JourneyBoard key={j.id} j={j} color={intent.color} intentName={intent.name} pages={doc.pages}
+                z={zOf(j.id)} setZ={setZFor(j.id)}
                 patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
                 deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
             ))}
             <div className="sticky bottom-0 px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
               <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
                       onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
-              {doc.personas.length > 1 && (() => {
-                const idx = doc.personas.findIndex(p => p.id === intent.id);
-                return (
-                  <div className="ml-auto flex items-center gap-2">
-                    <button className="w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--ink)]" aria-label="Previous intent"
-                            onClick={() => setTab(doc.personas[(idx - 1 + doc.personas.length) % doc.personas.length].id)}>‹</button>
-                    <span className="tk text-[10px] text-[var(--muted)] tabular-nums">intent {idx + 1} / {doc.personas.length}</span>
-                    <button className="w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--ink)]" aria-label="Next intent"
-                            onClick={() => setTab(doc.personas[(idx + 1) % doc.personas.length].id)}>›</button>
-                  </div>
-                );
-              })()}
+              <div className="ml-auto flex items-center gap-3">
+                {journeys.map(jj => {
+                  const zv = zOf(jj.id);
+                  const set = setZFor(jj.id);
+                  return (
+                    <div key={jj.id} className="flex items-center gap-0.5 px-1.5 py-1 rounded-full border border-[var(--border)]">
+                      {journeys.length > 1 && <span className="tk text-[10px] text-[var(--muted)] max-w-[110px] truncate pr-1">{jj.name}</span>}
+                      <button className="px-2 rounded-full hover:bg-[var(--hover)]" aria-label="Zoom out"
+                              onClick={() => set(v => ({ ...v, k: Math.max(0.4, (v.k === -1 ? 1 : v.k) * 0.9) }))}>−</button>
+                      <span className="tk text-[10px] w-9 text-center tabular-nums">{zv.k === -1 ? "…" : Math.round(zv.k * 100) + "%"}</span>
+                      <button className="px-2 rounded-full hover:bg-[var(--hover)]" aria-label="Zoom in"
+                              onClick={() => set(v => ({ ...v, k: Math.min(1.2, (v.k === -1 ? 1 : v.k) * 1.1) }))}>+</button>
+                      <button className="px-2 rounded-full hover:bg-[var(--hover)] text-[11px]" onClick={() => set({ x: 0, k: -1 })}>Fit</button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -839,7 +849,7 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   );
 }
 
-function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record }: {
+function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record, z, setZ }: {
   j: Journey; color: string; intentName: string; pages: Page[];
   patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
   patchStep: (jid: string, idx: number, note: string) => void;
@@ -848,10 +858,11 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
   deleteJourney: (jid: string) => void;
   active: string | null; setActive: (id: string | null) => void;
   record: (jid: string) => void;
+  z: { x: number; k: number };
+  setZ: (u: { x: number; k: number } | ((v: { x: number; k: number }) => { x: number; k: number })) => void;
 }) {
   const pageOf = (pid: string) => pages.find(p => p.id === pid);
   const pageName = (pid: string) => pageOf(pid)?.name ?? "(deleted)";
-  const [z, setZ] = useState({ x: 0, k: 1 });
   const wrapRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ sx: number; ox: number } | null>(null);
@@ -876,6 +887,7 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
     const w = rowRef.current?.scrollWidth ?? 1;
     setZ({ x: 0, k: Math.min(1, Math.max(0.4, cw / w)) });
   };
+  useEffect(() => { if (z.k === -1) fitStrip(); }, [z.k]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="border-b border-[var(--border)] bg-[var(--card)]">
       <div className="px-6 py-2.5 flex items-center gap-2">
@@ -896,12 +908,6 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
                value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
       </div>
       <div className="relative">
-        <div className="absolute top-1 right-4 z-10 flex items-center gap-0.5 px-1.5 py-1 rounded-full border border-[var(--border)] bg-[var(--card)]/90">
-          <button className="px-2 rounded-full hover:bg-[var(--hover)]" onClick={() => setZ(v => ({ ...v, k: Math.max(0.4, v.k * 0.9) }))} aria-label="Zoom out">−</button>
-          <span className="tk text-[10px] w-9 text-center tabular-nums">{Math.round(z.k * 100)}%</span>
-          <button className="px-2 rounded-full hover:bg-[var(--hover)]" onClick={() => setZ(v => ({ ...v, k: Math.min(1.2, v.k * 1.1) }))} aria-label="Zoom in">+</button>
-          <button className="px-2 rounded-full hover:bg-[var(--hover)] text-[11px]" onClick={fitStrip}>Fit</button>
-        </div>
         <div ref={wrapRef} className="overflow-hidden select-none" style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
              onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
           <div ref={rowRef} className="flex items-start gap-1 p-5 pt-2 w-max"
