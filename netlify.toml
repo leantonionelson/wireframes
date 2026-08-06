@@ -1,0 +1,9 @@
+# Octo on Netlify.
+# One-time setup after linking this repo:
+#   netlify db init        # provisions Netlify DB (Neon Postgres) and sets NETLIFY_DATABASE_URL
+# Local dev needs no database; the app falls back to JSON files in data/.
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
