@@ -573,7 +573,7 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild }: {
 function DetailModal({ page, onClose }: { page: Page; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
-      <div className="panel w-full max-w-5xl max-h-[90vh] rounded-3xl bg-[var(--panel)] backdrop-blur-2xl border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
+      <div className="panel w-full max-w-5xl max-h-[90vh] rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
            onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
           <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
@@ -744,7 +744,7 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   const journeys = intent ? doc.journeys.filter(j => j.personaId === intent.id) : [];
   return (
     <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
-      <div className="panel w-full max-w-6xl max-h-[92vh] rounded-3xl bg-[var(--panel)] backdrop-blur-2xl border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
+      <div className="panel w-full max-w-6xl max-h-[92vh] rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
            onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
           <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
