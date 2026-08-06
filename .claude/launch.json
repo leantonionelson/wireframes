@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "octo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "/Users/leantonionelson/projects/octo"
+      ],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
