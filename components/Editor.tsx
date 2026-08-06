@@ -818,7 +818,7 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
   const maxOff = Math.max(0, slots - WIN);
   const o = Math.min(off, maxOff);
   return (
-    <div className="border-b border-[var(--border)]">
+    <div className="border-b border-[var(--border)] bg-[var(--card)]">
       <div className="px-6 py-2.5 flex items-center gap-2">
         <input className="font-semibold bg-transparent outline-none text-[13.5px] min-w-0 flex-1" value={j.name}
                onChange={e => patchJourney(j.id, { name: e.target.value })} />
