@@ -28,13 +28,22 @@ export default function ProjectList() {
         </div>
         {!rows && <p className="text-sm text-neutral-400">Loading…</p>}
         {rows && rows.map(r => (
-          <Link key={r.id} href={`/p/${r.id}`}
-                className="block bg-white border border-neutral-200 rounded-xl px-5 py-4 mb-3 hover:border-blue-500">
-            <div className="font-semibold">{r.name}</div>
-            <div className="text-xs text-neutral-400 mt-0.5">
-              last edit {r.updatedBy} · {new Date(r.updatedAt).toLocaleString()} · rev {r.rev}
-            </div>
-          </Link>
+          <div key={r.id} className="relative mb-3">
+            <Link href={`/p/${r.id}`}
+                  className="block bg-white border border-neutral-200 rounded-xl px-5 py-4 hover:border-blue-500">
+              <div className="font-semibold pr-10">{r.name}</div>
+              <div className="text-xs text-neutral-400 mt-0.5">
+                last edit {r.updatedBy} · {new Date(r.updatedAt).toLocaleString()} · rev {r.rev}
+              </div>
+            </Link>
+            <button className="absolute top-3 right-3 text-neutral-300 hover:text-red-600 text-sm"
+                    title="Delete project"
+                    onClick={async () => {
+                      if (!confirm(`Delete "${r.name}" for everyone? This cannot be undone.`)) return;
+                      await fetch(`/api/projects?id=${encodeURIComponent(r.id)}`, { method: "DELETE" });
+                      load();
+                    }}>🗑</button>
+          </div>
         ))}
       </div>
     </main>

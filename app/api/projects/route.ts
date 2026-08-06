@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createProject, listProjects } from "@/lib/store";
+import { createProject, deleteProject, listProjects } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,4 +15,13 @@ export async function POST(req: NextRequest) {
   if (!name?.trim()) return NextResponse.json({ error: "name required" }, { status: 400 });
   const doc = await createProject(name.trim());
   return NextResponse.json({ doc });
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const id = req.nextUrl.searchParams.get("id") ?? "";
+    if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+    await deleteProject(id);
+    return NextResponse.json({ ok: true });
+  } catch (e) { return fail(e); }
 }

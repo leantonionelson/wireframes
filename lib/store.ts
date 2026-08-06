@@ -90,6 +90,10 @@ const pg = {
               VALUES (${d.id}, ${d.name}, ${d.rev}, ${d.updatedAt}, ${d.updatedBy}, ${JSON.stringify(d)})`;
     return d;
   },
+  async remove(id: string): Promise<void> {
+    const sql = await q();
+    await sql`DELETE FROM projects WHERE id = ${id}`;
+  },
   async save(doc: Doc, baseRev: number, by: string): Promise<SaveResult> {
     const sql = await q();
     const next: Doc = { ...doc, rev: baseRev + 1, updatedAt: Date.now(), updatedBy: by || "unknown" };
@@ -142,6 +146,9 @@ const file = {
     await fs.writeFile(path.join(DIR, safeId(d.id) + ".json"), JSON.stringify(d, null, 2));
     return d;
   },
+  async remove(id: string): Promise<void> {
+    try { await fs.unlink(path.join(DIR, safeId(id) + ".json")); } catch { /* gone */ }
+  },
   async save(doc: Doc, baseRev: number, by: string): Promise<SaveResult> {
     let result: SaveResult = { ok: false, doc: null };
     lock = lock.then(async () => {
@@ -164,3 +171,4 @@ export const listProjects: typeof pg.list = async () => (await backend()).list()
 export const readProject: typeof pg.read = async (id) => (await backend()).read(id);
 export const createProject: typeof pg.create = async (name) => (await backend()).create(name);
 export const saveProject: typeof pg.save = async (doc, baseRev, by) => (await backend()).save(doc, baseRev, by);
+export const deleteProject: typeof pg.remove = async (id) => (await backend()).remove(id);
