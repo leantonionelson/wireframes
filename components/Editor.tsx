@@ -816,9 +816,21 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
                 patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
                 deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
             ))}
-            <div className="p-4">
-              <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)]"
+            <div className="sticky bottom-0 px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
+              <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
                       onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
+              {doc.personas.length > 1 && (() => {
+                const idx = doc.personas.findIndex(p => p.id === intent.id);
+                return (
+                  <div className="ml-auto flex items-center gap-2">
+                    <button className="w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--ink)]" aria-label="Previous intent"
+                            onClick={() => setTab(doc.personas[(idx - 1 + doc.personas.length) % doc.personas.length].id)}>‹</button>
+                    <span className="tk text-[10px] text-[var(--muted)] tabular-nums">intent {idx + 1} / {doc.personas.length}</span>
+                    <button className="w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--ink)]" aria-label="Next intent"
+                            onClick={() => setTab(doc.personas[(idx + 1) % doc.personas.length].id)}>›</button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
