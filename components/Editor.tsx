@@ -596,7 +596,7 @@ function DetailModal({ page, setPageNote, patchBlock, addBlk, onClose }: {
                 <h3 className="font-bold text-[15px] text-[var(--ink)]">About this page</h3>
                 <CopyBtn text={page.note} />
               </div>
-              <textarea className="w-full bg-transparent outline-none resize-none text-[13.5px] leading-relaxed text-[var(--ink)] min-h-[72px]"
+              <textarea className="autogrow w-full bg-transparent outline-none text-[13.5px] leading-relaxed text-[var(--ink)] min-h-[48px]"
                         placeholder="Purpose of the page, user needs, evidence…"
                         value={page.note} onChange={e => setPageNote(page.id, e.target.value)} />
             </div>
@@ -607,15 +607,26 @@ function DetailModal({ page, setPageNote, patchBlock, addBlk, onClose }: {
                          value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
                   <CopyBtn text={[b.label, b.note, b.component && `Component: ${b.component}`, b.flag && `FLAG: ${b.flag}`].filter(Boolean).join("\n")} />
                 </div>
-                <textarea className="w-full bg-transparent outline-none resize-none text-[13.5px] leading-relaxed text-[var(--ink)] mb-1 min-h-[44px]"
+                <textarea className="autogrow w-full bg-transparent outline-none text-[13.5px] leading-relaxed text-[var(--ink)] mb-1 min-h-[24px]"
                           placeholder="Purpose, user needs, content status…"
                           value={b.note} onChange={e => patchBlock(page.id, b.id, { note: e.target.value })} />
-                <input className="tk w-full text-[11px] text-[var(--muted)] bg-transparent outline-none"
+                <input className="w-full text-[13.5px] text-[var(--ink)] bg-transparent outline-none"
                        placeholder="Component, e.g. AEM: Promotional Banner"
                        value={b.component} onChange={e => patchBlock(page.id, b.id, { component: e.target.value })} />
                 <input className="w-full text-[13px] text-red-500 font-medium mt-1.5 bg-transparent outline-none placeholder:text-red-300"
                        placeholder="Red flag: custom component or pending decision…"
                        value={b.flag} onChange={e => patchBlock(page.id, b.id, { flag: e.target.value })} />
+                <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-[var(--border)]">
+                  {(Object.keys(COLOR_STYLES) as ColorRole[]).map(c => (
+                    <button key={c} title={COLOR_STYLES[c].label}
+                            className={`w-4 h-4 rounded-full ${b.color === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
+                            style={{ background: COLOR_STYLES[c].bg }} onClick={() => patchBlock(page.id, b.id, { color: c })} />
+                  ))}
+                  <select className="ml-auto border border-[var(--border)] rounded-full px-2 py-0.5 bg-transparent text-[11px]"
+                          value={b.glyph} onChange={e => patchBlock(page.id, b.id, { glyph: e.target.value as GlyphId })}>
+                    {(Object.keys(GLYPHS) as GlyphId[]).map(g => <option key={g} value={g}>{GLYPHS[g].name}</option>)}
+                  </select>
+                </div>
                 {b.comments.length > 0 && (
                   <div className="mt-3 space-y-1.5">
                     {b.comments.map(c => (

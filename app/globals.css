@@ -54,3 +54,4 @@ body{font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,sans-se
 .tree ul ul::before{content:'';position:absolute;top:0;left:50%;border-left:2px solid var(--connector);width:0;height:22px}
 .tree>ul{padding-top:0}
 .tree>ul>li::after,.tree>ul>li::before{display:none}
+.autogrow{field-sizing:content;overflow:hidden;resize:none}
