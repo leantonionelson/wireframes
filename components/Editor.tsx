@@ -5,7 +5,7 @@ import { GLYPHS, Glyph } from "@/lib/glyphs";
 
 type Sel = { pageId: string; blockId?: string } | null;
 
-export default function Editor() {
+export default function Editor({ projectId }: { projectId: string }) {
   const [doc, setDoc] = useState<Doc | null>(null);
   const [sel, setSel] = useState<Sel>(null);
   const [dirty, setDirty] = useState(false);
@@ -26,18 +26,18 @@ export default function Editor() {
   useEffect(() => {
     let stop = false;
     const load = async () => {
-      const r = await fetch("/api/doc").then(r => r.json());
-      if (!stop) { setDoc(r.doc); setStatus("saved"); }
+      const r = await fetch(`/api/doc?id=${projectId}`).then(r => r.json());
+      if (!stop) { setDoc(r.doc); setStatus(r.doc ? "saved" : "not found"); }
     };
     load();
     const t = setInterval(async () => {
       const d = docRef.current;
       if (!d || dirtyRef.current) return;
-      const r = await fetch(`/api/doc?since=${d.rev}`).then(r => r.json());
+      const r = await fetch(`/api/doc?id=${projectId}&since=${d.rev}`).then(r => r.json());
       if (!stop && !r.unchanged && r.doc) setDoc(r.doc);
     }, 4000);
     return () => { stop = true; clearInterval(t); };
-  }, []);
+  }, [projectId]);
 
   // debounced autosave
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,12 +150,20 @@ export default function Editor() {
   return (
     <div className="h-screen flex flex-col bg-[#eef1f6] text-neutral-900">
       <header className="flex items-center gap-4 px-5 py-2.5 bg-white border-b border-neutral-200 z-10">
-        <span className="text-lg" aria-hidden>🐙</span>
+        <a href="/" className="text-lg" title="All projects" aria-label="All projects">🐙</a>
         <input className="font-semibold text-[15px] bg-transparent outline-none min-w-[300px]" value={doc.name}
                onChange={e => mutate(d => { d.name = e.target.value; return d; })} />
         <span className="text-xs text-neutral-400">{status}{doc.updatedBy && status === "saved" ? ` · last edit ${doc.updatedBy}` : ""}</span>
         <div className="ml-auto flex items-center gap-2 text-xs">
           <button className="px-2 py-1 border rounded" onClick={() => addChildPage(null)}>+ Top-level page</button>
+          <button className="px-2 py-1 border rounded" onClick={async () => {
+            const node = canvasRef.current?.querySelector(".tree") as HTMLElement | null;
+            if (!node || !docRef.current) return;
+            const { toPng } = await import("html-to-image");
+            const url = await toPng(node, { backgroundColor: "#eef1f6", pixelRatio: 2 });
+            const a = document.createElement("a");
+            a.href = url; a.download = `${docRef.current.name.replace(/[^\w-]+/g, "_")}.png`; a.click();
+          }}>Export PNG</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView({ x: 60, y: 40, k: 0.8 })}>Fit</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView(v => ({ ...v, k: Math.max(0.25, v.k * 0.9) }))}>−</button>
           <button className="px-2 py-1 border rounded" onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.1) }))}>+</button>
