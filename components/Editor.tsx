@@ -64,7 +64,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   }, []);
 
   // ---------- pan & zoom ----------
-  const [view, setView] = useState({ x: 60, y: 40, k: 0.8 });
+  const [view, setView] = useState({ x: 60, y: 84, k: 0.8 });
   const canvasRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ sx: number; sy: number; ox: number; oy: number } | null>(null);
   const onPointerDown = (e: React.PointerEvent) => {
@@ -73,8 +73,10 @@ export default function Editor({ projectId }: { projectId: string }) {
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!drag.current) return;
-    setView(v => ({ ...v, x: drag.current!.ox + e.clientX - drag.current!.sx, y: drag.current!.oy + e.clientY - drag.current!.sy }));
+    const d = drag.current;
+    if (!d) return;
+    const x = d.ox + e.clientX - d.sx, y = d.oy + e.clientY - d.sy;
+    setView(v => ({ ...v, x, y }));
   };
   const onPointerUp = () => { drag.current = null; };
   const onWheel = (e: React.WheelEvent) => {
@@ -149,8 +151,8 @@ export default function Editor({ projectId }: { projectId: string }) {
   const roots = childrenOf.get(null) ?? [];
 
   return (
-    <div className="h-screen flex flex-col bg-[var(--bg)] text-[var(--ink)]">
-      <header className="flex items-center gap-3 px-5 py-2.5 bg-[var(--glass)] backdrop-blur-xl border-b border-[var(--border)] z-10">
+    <div className="h-screen relative bg-[var(--bg)] text-[var(--ink)]">
+      <header className="absolute top-3 left-3 right-3 z-20 flex items-center gap-3 pl-5 pr-2 py-2 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
         <a href="/" title="All projects" aria-label="All projects" className="flex items-center gap-2 text-[var(--accent)]"><LogoMark /><span className="font-semibold tracking-tight text-[13px] text-[var(--ink)]">Scaffold</span></a>
         <input className="font-semibold text-[15px] bg-transparent outline-none min-w-[300px]" value={doc.name}
                onChange={e => mutate(d => { d.name = e.target.value; return d; })} />
@@ -166,17 +168,19 @@ export default function Editor({ projectId }: { projectId: string }) {
             const a = document.createElement("a");
             a.href = url; a.download = `${docRef.current.name.replace(/[^\w-]+/g, "_")}.png`; a.click();
           }}>Export PNG</button>
-          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => setView({ x: 60, y: 40, k: 0.8 })}>Fit</button>
-          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => setView(v => ({ ...v, k: Math.max(0.25, v.k * 0.9) }))}>−</button>
-          <button className="px-3 py-1 border border-[var(--border)] rounded-full hover:bg-[var(--hover)]" onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.1) }))}>+</button>
-          <span className="w-9 text-center tabular-nums">{Math.round(view.k * 100)}%</span>
+          <div className="flex items-center rounded-full border border-[var(--border)] overflow-hidden">
+            <button className="px-3 py-1 hover:bg-[var(--hover)]" onClick={() => setView({ x: 60, y: 84, k: 0.8 })}>Fit</button>
+            <button className="px-2.5 py-1 hover:bg-[var(--hover)] border-l border-[var(--border)]" onClick={() => setView(v => ({ ...v, k: Math.max(0.25, v.k * 0.9) }))}>−</button>
+            <span className="tk w-11 py-1 text-center text-[11px] tabular-nums border-l border-[var(--border)]">{Math.round(view.k * 100)}%</span>
+            <button className="px-2.5 py-1 hover:bg-[var(--hover)] border-l border-[var(--border)]" onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.1) }))}>+</button>
+          </div>
           <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="Shown to teammates on your edits">{(me || "??").slice(0, 2).toUpperCase()}</span>
           <ThemeToggle />
           <input className="border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
         </div>
       </header>
 
-      <div className="flex-1 relative overflow-hidden" ref={canvasRef}
+      <div className="absolute inset-0 overflow-hidden" ref={canvasRef}
            onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onWheel={onWheel}
            style={{ cursor: drag.current ? "grabbing" : "grab",
              backgroundImage: "linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px)",
@@ -251,7 +255,7 @@ function Inspector({ page, block, me, close, setPageNote, patchBlock, moveBlock,
 }) {
   const [draft, setDraft] = useState("");
   return (
-    <aside className="panel absolute top-3 right-3 bottom-3 w-[360px] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden">
+    <aside className="panel absolute top-[68px] right-3 bottom-3 w-[360px] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden">
       <div className="flex items-center px-4 py-2.5 border-b border-[var(--border)]">
         <div className="text-sm font-bold text-[var(--accent)] truncate">{page.name}{block ? ` · ${block.label}` : ""}</div>
         <button className="ml-auto text-[var(--muted)] hover:text-[var(--ink)]" onClick={close}>✕</button>
