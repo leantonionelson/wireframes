@@ -66,8 +66,8 @@ export default function Editor({ projectId }: { projectId: string }) {
   const [detailPageId, setDetailPageId] = useState<string | null>(null);
   const [recording, setRecording] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
-  const [wsIntentId, setWsIntentId] = useState<string | null>(null);
-  const [wsJourneyId, setWsJourneyId] = useState<string | null>(null);
+  const [wsOpen, setWsOpen] = useState(false);
+  const [wsTab, setWsTab] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("loading");
   const [me, setMe] = useState("");
@@ -154,7 +154,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
       }
-      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsIntentId(null); }
+      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -276,6 +276,8 @@ export default function Editor({ projectId }: { projectId: string }) {
   /* journeys */
   const addPersona = (name: string, color: string, desc: string) =>
     mutate(d => { d.personas.push({ id: uid(), name, color, desc }); return d; });
+  const patchPersona = (perId: string, patch: Partial<Pick<Persona, "name" | "color" | "desc">>) =>
+    mutate(d => { const p = d.personas.find(p => p.id === perId); if (p) Object.assign(p, patch); return d; });
   const deletePersona = (perId: string) => mutate(d => {
     d.personas = d.personas.filter(p => p.id !== perId);
     d.journeys = d.journeys.filter(j => j.personaId !== perId);
@@ -304,7 +306,7 @@ export default function Editor({ projectId }: { projectId: string }) {
     if (j) j.steps.splice(idx, 1);
     return d;
   });
-  const deleteJourney = (jid: string) => { mutate(d => { d.journeys = d.journeys.filter(j => j.id !== jid); return d; }); if (recording === jid) setRecording(null); if (active === jid) setActive(null); if (wsJourneyId === jid) setWsJourneyId(null); };
+  const deleteJourney = (jid: string) => { mutate(d => { d.journeys = d.journeys.filter(j => j.id !== jid); return d; }); if (recording === jid) setRecording(null); if (active === jid) setActive(null); };
 
   const exportPng = async () => {
     const node = canvasRef.current?.querySelector(".tree") as HTMLElement | null;
@@ -341,7 +343,6 @@ export default function Editor({ projectId }: { projectId: string }) {
   const roots = childrenOf.get(null) ?? [];
   const pillBtn = "w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--ink)]";
   const activeJourney = doc.journeys.find(j => j.id === active) ?? null;
-  const wsIntent = wsIntentId ? doc.personas.find(p => p.id === wsIntentId) ?? null : null;
 
   return (
     <div className="h-screen relative bg-[var(--bg)] text-[var(--ink)] overflow-hidden">
@@ -395,9 +396,9 @@ export default function Editor({ projectId }: { projectId: string }) {
           {ICONS.export}<span className="hidden sm:inline">Export</span>
         </button>
         <span className="w-px h-5 bg-[var(--border)]" />
-        <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${panel === "journeys" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
-                onClick={() => setPanel(panel === "journeys" ? null : "journeys")} title="Intents & journeys">
-          {ICONS.route}<span className="hidden sm:inline">Intents</span>
+        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] hover:bg-[var(--hover)]"
+                onClick={() => { setWsOpen(true); setWsTab(t => t ?? (docRef.current?.personas[0]?.id ?? null)); }} title="User journeys">
+          {ICONS.route}<span className="hidden sm:inline">User journeys</span>
         </button>
         <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
                 onClick={() => setPanel(panel === "history" ? null : "history")} title="Version history">
@@ -451,21 +452,16 @@ export default function Editor({ projectId }: { projectId: string }) {
       {panel === "history" && (
         <HistoryPanel projectId={projectId} me={me} close={() => setPanel(null)} restore={restoreVersion} />
       )}
-      {panel === "journeys" && (
-        <IntentsPanel doc={doc}
-          addPersona={addPersona} deletePersona={deletePersona}
-          openIntent={(pid) => { setWsIntentId(pid); setWsJourneyId(doc.journeys.find(j => j.personaId === pid)?.id ?? null); }}
-          close={() => setPanel(null)} />
-      )}
+
 
       {detailPage && <DetailModal page={detailPage} onClose={() => setDetailPageId(null)} />}
-      {wsIntent && <IntentWorkspace intent={wsIntent} journeys={doc.journeys.filter(j => j.personaId === wsIntent.id)}
-        tab={wsJourneyId} setTab={setWsJourneyId} pages={doc.pages}
+      {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab}
+        patchPersona={patchPersona} addPersona={addPersona} deletePersona={deletePersona}
         patchJourney={patchJourney} patchStep={patchStep} addStep={appendStep} removeStep={removeStep}
-        addJourney={(pid) => setWsJourneyId(addJourney("New journey", pid))}
-        deleteJourney={deleteJourney} active={active} setActive={setActive}
-        record={(jid) => { setRecording(jid); setWsIntentId(null); }}
-        onClose={() => setWsIntentId(null)} />}
+        addJourney={addJourney} deleteJourney={deleteJourney}
+        active={active} setActive={setActive}
+        record={(jid) => { setRecording(jid); setWsOpen(false); }}
+        onClose={() => setWsOpen(false)} />}
     </div>
   );
 }
@@ -728,169 +724,156 @@ const Arrow = ({ color }: { color: string }) => (
   </svg>
 );
 
-/* ---------- intent workspace: journeys as tabs ---------- */
-function IntentWorkspace({ intent, journeys, tab, setTab, pages, patchJourney, patchStep, addStep, removeStep, addJourney, deleteJourney, active, setActive, record, onClose }: {
-  intent: Persona; journeys: Journey[]; tab: string | null; setTab: (id: string | null) => void; pages: Page[];
+/* ---------- user journeys modal: intents as tabs ---------- */
+function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deletePersona, patchJourney, patchStep, addStep, removeStep, addJourney, deleteJourney, active, setActive, record, onClose }: {
+  doc: Doc; tab: string | null; setTab: (id: string | null) => void;
+  patchPersona: (id: string, patch: Partial<Pick<Persona, "name" | "color" | "desc">>) => void;
+  addPersona: (name: string, color: string, desc: string) => void;
+  deletePersona: (id: string) => void;
   patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
   patchStep: (jid: string, idx: number, note: string) => void;
   addStep: (jid: string, pageId: string) => void;
   removeStep: (jid: string, idx: number) => void;
-  addJourney: (intentId: string) => void;
+  addJourney: (name: string, personaId: string) => string;
   deleteJourney: (jid: string) => void;
   active: string | null; setActive: (id: string | null) => void;
   record: (jid: string) => void;
   onClose: () => void;
 }) {
-  const color = intent.color;
-  const j = journeys.find(x => x.id === tab) ?? journeys[0] ?? null;
-  const pageOf = (pid: string) => pages.find(p => p.id === pid);
-  const pageName = (pid: string) => pageOf(pid)?.name ?? "(deleted)";
+  const intent = doc.personas.find(p => p.id === tab) ?? doc.personas[0] ?? null;
+  const journeys = intent ? doc.journeys.filter(j => j.personaId === intent.id) : [];
   return (
     <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
       <div className="panel w-full max-w-6xl max-h-[92vh] rounded-3xl bg-[var(--panel)] backdrop-blur-2xl border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
            onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
-          <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: color }} />
-          <h2 className="text-lg font-bold truncate">{intent.name}</h2>
-          <span className="tk text-[11px] text-[var(--muted)] shrink-0">intent</span>
-          <div className="ml-auto flex items-center gap-2">
-            {j && <CopyBtn text={journeyToText(j, intent.name, pageName)} label="Copy" />}
-            <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
-          </div>
+          <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
+          <h2 className="text-lg font-bold">User journeys</h2>
+          <span className="tk text-[11px] text-[var(--muted)]">what the user actually came for</span>
+          <button className="ml-auto w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
         </div>
-        {/* journey tabs */}
+        {/* intent tabs */}
         <div className="flex items-end gap-1 px-5 pt-2.5 border-b border-[var(--border)] overflow-x-auto">
-          {journeys.map(x => (
-            <button key={x.id} onClick={() => setTab(x.id)}
-              className={`px-3.5 py-1.5 text-[12.5px] rounded-t-xl border border-b-0 whitespace-nowrap ${j?.id === x.id ? "bg-[var(--card)] border-[var(--border)] font-semibold" : "border-transparent text-[var(--muted)] hover:text-[var(--ink)]"}`}>
-              {x.name}
+          {doc.personas.map(p => (
+            <button key={p.id} onClick={() => setTab(p.id)}
+              className={`flex items-center gap-2 px-3.5 py-2 text-[12.5px] rounded-t-xl border border-b-0 whitespace-nowrap ${intent?.id === p.id ? "bg-[var(--card)] border-[var(--border)] font-semibold" : "border-transparent text-[var(--muted)] hover:text-[var(--ink)]"}`}>
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: p.color }} />{p.name}
             </button>
           ))}
-          <button className="px-3 py-1.5 text-[13px] text-[var(--muted)] hover:text-[var(--accent)]" title="Add journey"
-                  onClick={() => addJourney(intent.id)}>{ICONS.plus}</button>
+          <button className="px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--accent)]" title="Add intent"
+                  onClick={() => { addPersona("New intent", PERSONA_COLORS[doc.personas.length % PERSONA_COLORS.length], ""); }}>{ICONS.plus}</button>
         </div>
-        {!j && <div className="p-10 text-sm text-[var(--muted)]">No journeys for this intent yet. Add one with the + tab.</div>}
-        {j && (
-          <>
-            {/* journey toolbar */}
+        {!intent && <div className="p-10 text-sm text-[var(--muted)]">No intents yet. Add one with the + tab.</div>}
+        {intent && (
+          <div className="flex-1 overflow-y-auto">
+            {/* intent header row */}
             <div className="px-6 py-2.5 border-b border-[var(--border)] flex items-center gap-2">
-              <input className="font-semibold bg-transparent outline-none text-[14px] min-w-0 flex-1" value={j.name}
-                     onChange={e => patchJourney(j.id, { name: e.target.value })} />
-              <button className={`text-[11px] px-2.5 py-1 rounded-full border ${active === j.id ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)]"}`}
-                      title="Trace on canvas" onClick={() => setActive(active === j.id ? null : j.id)}>Trace</button>
-              <button className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)]"
-                      title="Close and record by clicking pages" onClick={() => record(j.id)}>Record</button>
-              <button className="text-[var(--muted)] hover:text-red-500"
-                      onClick={() => { if (confirm(`Delete journey "${j.name}"?`)) { deleteJourney(j.id); setTab(journeys.find(x => x.id !== j.id)?.id ?? null); } }}>{ICONS.trash}</button>
-            </div>
-            <div className="px-6 py-3 border-b border-[var(--border)] flex items-center gap-3">
-              <span className="tk text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">Goal</span>
-              <input className="flex-1 bg-transparent outline-none text-[13.5px] border-b border-transparent focus:border-[var(--border)]"
-                     placeholder="What is this intent trying to achieve?"
-                     value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
-            </div>
-            <div className="flex-1 overflow-x-auto overflow-y-auto">
-              <div className="flex items-start gap-1 p-6 min-w-max">
-                <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
-                  <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Entry</div>
-                  <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
-                            placeholder="Where does this journey begin? Channel, referrer, system…"
-                            value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
-                </div>
-                <Arrow color={color} />
-                {j.steps.map((st, i) => {
-                  const p = pageOf(st.pageId);
-                  return (
-                    <React.Fragment key={i}>
-                      <div className="w-[200px] shrink-0">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: color }}>{i + 1}</span>
-                          <span className="text-[12px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
-                          <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>
-                        </div>
-                        {p ? <MiniStack page={p} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
-                        <textarea className="mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 resize-none min-h-[54px]"
-                                  placeholder="What do they do here? Evidence?"
-                                  value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
-                      </div>
-                      <Arrow color={color} />
-                    </React.Fragment>
-                  );
-                })}
-                {/* add step */}
-                <div className="w-[170px] shrink-0 rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch">
-                  <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
-                  <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
-                          value="" onChange={e => { if (e.target.value) addStep(j.id, e.target.value); }}>
-                    <option value="">choose page…</option>
-                    {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>
-                </div>
-                <Arrow color={color} />
-                <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
-                  <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
-                  <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
-                            placeholder="Where does it end? Hand-off, destination, system…"
-                            value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
-                </div>
+              <span className="w-3 h-3 rounded-full shrink-0" style={{ background: intent.color }} />
+              <input className="font-semibold bg-transparent outline-none text-[14px] min-w-0 flex-1" value={intent.name}
+                     onChange={e => patchPersona(intent.id, { name: e.target.value })} />
+              <div className="flex gap-1">
+                {PERSONA_COLORS.map(c => (
+                  <button key={c} className={`w-[14px] h-[14px] rounded-full ${intent.color === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
+                          style={{ background: c }} onClick={() => patchPersona(intent.id, { color: c })} />
+                ))}
               </div>
+              <button className="text-[var(--muted)] hover:text-red-500" title="Delete intent and its journeys"
+                      onClick={() => { if (confirm(`Delete intent "${intent.name}" and its journeys?`)) { deletePersona(intent.id); setTab(doc.personas.find(p => p.id !== intent.id)?.id ?? null); } }}>{ICONS.trash}</button>
             </div>
-          </>
+            {journeys.map(j => (
+              <JourneyBoard key={j.id} j={j} color={intent.color} intentName={intent.name} pages={doc.pages}
+                patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
+                deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
+            ))}
+            <div className="p-4">
+              <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)]"
+                      onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
+            </div>
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-/* ---------- intents panel ---------- */
-function IntentsPanel({ doc, addPersona, deletePersona, openIntent, close }: {
-  doc: Doc;
-  addPersona: (name: string, color: string, desc: string) => void;
-  deletePersona: (id: string) => void;
-  openIntent: (id: string) => void;
-  close: () => void;
+function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record }: {
+  j: Journey; color: string; intentName: string; pages: Page[];
+  patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
+  patchStep: (jid: string, idx: number, note: string) => void;
+  addStep: (jid: string, pageId: string) => void;
+  removeStep: (jid: string, idx: number) => void;
+  deleteJourney: (jid: string) => void;
+  active: string | null; setActive: (id: string | null) => void;
+  record: (jid: string) => void;
 }) {
-  const [pName, setPName] = useState("");
-  const [pColor, setPColor] = useState(PERSONA_COLORS[0]);
+  const pageOf = (pid: string) => pages.find(p => p.id === pid);
+  const pageName = (pid: string) => pageOf(pid)?.name ?? "(deleted)";
   return (
-    <aside className="panel absolute top-[68px] right-4 bottom-4 w-[340px] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden z-30">
-      <div className="flex items-center px-4 py-2.5 border-b border-[var(--border)]">
-        <div className="text-sm font-bold text-[var(--accent)]">Intents</div>
-        <button className="ml-auto text-[var(--muted)] hover:text-[var(--ink)]" onClick={close}>{ICONS.close}</button>
+    <div className="border-b border-[var(--border)]">
+      <div className="px-6 py-2.5 flex items-center gap-2">
+        <input className="font-semibold bg-transparent outline-none text-[13.5px] min-w-0 flex-1" value={j.name}
+               onChange={e => patchJourney(j.id, { name: e.target.value })} />
+        <CopyBtn text={journeyToText(j, intentName, pageName)} />
+        <button className={`text-[11px] px-2.5 py-1 rounded-full border ${active === j.id ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)]"}`}
+                title="Trace on canvas" onClick={() => setActive(active === j.id ? null : j.id)}>Trace</button>
+        <button className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)]"
+                title="Close and record by clicking pages" onClick={() => record(j.id)}>Record</button>
+        <button className="text-[var(--muted)] hover:text-red-500"
+                onClick={() => { if (confirm(`Delete journey "${j.name}"?`)) deleteJourney(j.id); }}>{ICONS.trash}</button>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-[13px]">
-        <p className="tk text-[10px] text-[var(--muted)]">What has the user actually come for? Open an intent to define its journeys.</p>
-        <div className="space-y-1.5">
-          {doc.personas.map(p => {
-            const count = doc.journeys.filter(j => j.personaId === p.id).length;
+      <div className="px-6 pb-2 flex items-center gap-3">
+        <span className="tk text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">Goal</span>
+        <input className="flex-1 bg-transparent outline-none text-[13px] border-b border-transparent focus:border-[var(--border)]"
+               placeholder="What is this intent trying to achieve?"
+               value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
+      </div>
+      <div className="overflow-x-auto">
+        <div className="flex items-start gap-1 p-5 pt-2 min-w-max">
+          <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
+            <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Entry</div>
+            <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
+                      placeholder="Where does this journey begin?"
+                      value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
+          </div>
+          <Arrow color={color} />
+          {j.steps.map((st, i) => {
+            const p = pageOf(st.pageId);
             return (
-              <div key={p.id} className="flex items-center gap-2 border border-[var(--border)] rounded-xl px-3 py-2 hover:border-[var(--accent)]">
-                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
-                <button className="flex-1 min-w-0 text-left truncate font-medium hover:text-[var(--accent)]" title={p.desc}
-                        onClick={() => openIntent(p.id)}>{p.name}</button>
-                <span className="tk text-[10px] text-[var(--muted)] shrink-0">{count} {count === 1 ? "journey" : "journeys"}</span>
-                <button className="text-[var(--muted)] hover:text-[var(--accent)]" title="Open journeys" onClick={() => openIntent(p.id)}>{ICONS.detail}</button>
-                <button className="text-[var(--muted)] hover:text-red-500" title="Delete intent and its journeys"
-                        onClick={() => { if (confirm(`Delete intent "${p.name}" and its journeys?`)) deletePersona(p.id); }}>{ICONS.trash}</button>
-              </div>
+              <React.Fragment key={i}>
+                <div className="w-[200px] shrink-0">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: color }}>{i + 1}</span>
+                    <span className="text-[12px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
+                    <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>
+                  </div>
+                  {p ? <MiniStack page={p} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
+                  <textarea className="mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 resize-none min-h-[54px]"
+                            placeholder="What do they do here? Evidence?"
+                            value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
+                </div>
+                <Arrow color={color} />
+              </React.Fragment>
             );
           })}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <input className="flex-1 border border-[var(--border)] rounded-full px-3 py-1.5 bg-transparent text-[12.5px]" placeholder="New intent…"
-                 value={pName} onChange={e => setPName(e.target.value)} />
-          <div className="flex gap-1">
-            {PERSONA_COLORS.map(c => (
-              <button key={c} className={`w-[18px] h-[18px] rounded-full ${pColor === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
-                      style={{ background: c }} onClick={() => setPColor(c)} />
-            ))}
+          <div className="w-[170px] shrink-0 rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch">
+            <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
+            <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
+                    value="" onChange={e => { if (e.target.value) addStep(j.id, e.target.value); }}>
+              <option value="">choose page…</option>
+              {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>
           </div>
-          <button className="px-2.5 py-1.5 rounded-full bg-[var(--accent)] text-white text-[12px]"
-                  onClick={() => { if (pName.trim()) { addPersona(pName.trim(), pColor, ""); setPName(""); } }}>Add</button>
+          <Arrow color={color} />
+          <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
+            <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
+            <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
+                      placeholder="Where does it end?"
+                      value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
+          </div>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
 
