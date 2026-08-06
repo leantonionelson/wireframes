@@ -10,7 +10,24 @@ import { seedDoc } from "./seed";
 export type ProjectMeta = Pick<Doc, "id" | "name" | "rev" | "updatedAt" | "updatedBy">;
 export type SaveResult = { ok: boolean; doc: Doc | null };
 
-const DB_URL = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || "";
+// Connection resolution order: explicit env var, then Netlify's runtime
+// resolver (@netlify/database, which injects the URL in deployed functions),
+// then no database = file store.
+let DB_URL = process.env.NETLIFY_DATABASE_URL || process.env.DATABASE_URL || "";
+let resolved: Promise<string> | null = null;
+function resolveDbUrl(): Promise<string> {
+  if (!resolved) {
+    resolved = (async () => {
+      if (DB_URL) return DB_URL;
+      try {
+        const m = await import("@netlify/database");
+        DB_URL = m.getConnectionString() || "";
+      } catch { /* not on Netlify and no env var: file store */ }
+      return DB_URL;
+    })();
+  }
+  return resolved;
+}
 
 export function newProjectDoc(name: string): Doc {
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Math.random().toString(36).slice(2, 6);
@@ -140,8 +157,10 @@ const file = {
   },
 };
 
-const store = DB_URL ? pg : file;
-export const listProjects = store.list;
-export const readProject = store.read;
-export const createProject = store.create;
-export const saveProject = store.save;
+async function backend() {
+  return (await resolveDbUrl()) ? pg : file;
+}
+export const listProjects: typeof pg.list = async () => (await backend()).list();
+export const readProject: typeof pg.read = async (id) => (await backend()).read(id);
+export const createProject: typeof pg.create = async (name) => (await backend()).create(name);
+export const saveProject: typeof pg.save = async (doc, baseRev, by) => (await backend()).save(doc, baseRev, by);
