@@ -767,7 +767,6 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   record: (jid: string) => void;
   onClose: () => void;
 }) {
-  const [offs, setOffs] = useState<Record<string, number>>({});
   const intent = doc.personas.find(p => p.id === tab) ?? doc.personas[0] ?? null;
   const journeys = intent ? doc.journeys.filter(j => j.personaId === intent.id) : [];
   return (
@@ -814,27 +813,12 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
             </div>
             {journeys.map(j => (
               <JourneyBoard key={j.id} j={j} color={intent.color} intentName={intent.name} pages={doc.pages}
-                off={offs[j.id] ?? 0} setOff={(n: number) => setOffs(sp => ({ ...sp, [j.id]: n }))}
                 patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
                 deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
             ))}
             <div className="sticky bottom-0 px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
               <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
                       onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
-              {journeys.filter(jj => jj.steps.length + 1 > 3).map(jj => {
-                const mo = jj.steps.length + 1 - 3;
-                const o = Math.min(offs[jj.id] ?? 0, mo);
-                return (
-                  <div key={jj.id} className="flex items-center gap-1.5 ml-3">
-                    {journeys.length > 1 && <span className="tk text-[10px] text-[var(--muted)] max-w-[110px] truncate">{jj.name}</span>}
-                    <button className={`w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] ${o > 0 ? "text-[var(--ink)] hover:bg-[var(--hover)]" : "text-[var(--border)]"}`}
-                            disabled={o === 0} onClick={() => setOffs(sp => ({ ...sp, [jj.id]: Math.max(0, o - 1) }))} aria-label="Previous steps">‹</button>
-                    <span className="tk text-[10px] text-[var(--muted)] tabular-nums">steps {o + 1}–{Math.min(o + 3, jj.steps.length)} / {jj.steps.length}</span>
-                    <button className={`w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] ${o < mo ? "text-[var(--ink)] hover:bg-[var(--hover)]" : "text-[var(--border)]"}`}
-                            disabled={o >= mo} onClick={() => setOffs(sp => ({ ...sp, [jj.id]: Math.min(mo, o + 1) }))} aria-label="Next steps">›</button>
-                  </div>
-                );
-              })}
               {doc.personas.length > 1 && (() => {
                 const idx = doc.personas.findIndex(p => p.id === intent.id);
                 return (
@@ -855,7 +839,7 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   );
 }
 
-function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record, off, setOff }: {
+function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record }: {
   j: Journey; color: string; intentName: string; pages: Page[];
   patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
   patchStep: (jid: string, idx: number, note: string) => void;
@@ -864,14 +848,34 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
   deleteJourney: (jid: string) => void;
   active: string | null; setActive: (id: string | null) => void;
   record: (jid: string) => void;
-  off: number; setOff: (n: number) => void;
 }) {
   const pageOf = (pid: string) => pages.find(p => p.id === pid);
   const pageName = (pid: string) => pageOf(pid)?.name ?? "(deleted)";
-  const WIN = 3;
-  const slots = j.steps.length + 1; // steps plus the add-step card
-  const maxOff = Math.max(0, slots - WIN);
-  const o = Math.min(off, maxOff);
+  const [z, setZ] = useState({ x: 0, k: 1 });
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ sx: number; ox: number } | null>(null);
+  const clampX = (x: number, k: number) => {
+    const cw = wrapRef.current?.clientWidth ?? 0;
+    const w = (rowRef.current?.scrollWidth ?? 0) * k;
+    return Math.min(0, Math.max(Math.min(0, cw - w), x));
+  };
+  const onDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("textarea,input,button,select")) return;
+    dragRef.current = { sx: e.clientX, ox: z.x };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const d = dragRef.current;
+    if (!d) return;
+    setZ(v => ({ ...v, x: clampX(d.ox + e.clientX - d.sx, v.k) }));
+  };
+  const onUp = () => { dragRef.current = null; };
+  const fitStrip = () => {
+    const cw = wrapRef.current?.clientWidth ?? 0;
+    const w = rowRef.current?.scrollWidth ?? 1;
+    setZ({ x: 0, k: Math.min(1, Math.max(0.4, cw / w)) });
+  };
   return (
     <div className="border-b border-[var(--border)] bg-[var(--card)]">
       <div className="px-6 py-2.5 flex items-center gap-2">
@@ -891,56 +895,60 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
                placeholder="What is this intent trying to achieve?"
                value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
       </div>
-      <div className="flex items-start gap-1 p-5 pt-2">
-        <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
-          <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Entry</div>
-          <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
-                    placeholder="Where does this journey begin?"
-                    value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
+      <div className="relative">
+        <div className="absolute top-1 right-4 z-10 flex items-center gap-0.5 px-1.5 py-1 rounded-full border border-[var(--border)] bg-[var(--card)]/90">
+          <button className="px-2 rounded-full hover:bg-[var(--hover)]" onClick={() => setZ(v => ({ ...v, k: Math.max(0.4, v.k * 0.9) }))} aria-label="Zoom out">−</button>
+          <span className="tk text-[10px] w-9 text-center tabular-nums">{Math.round(z.k * 100)}%</span>
+          <button className="px-2 rounded-full hover:bg-[var(--hover)]" onClick={() => setZ(v => ({ ...v, k: Math.min(1.2, v.k * 1.1) }))} aria-label="Zoom in">+</button>
+          <button className="px-2 rounded-full hover:bg-[var(--hover)] text-[11px]" onClick={fitStrip}>Fit</button>
         </div>
-        <Arrow color={color} />
-        <div className="flex items-start gap-1 flex-1 min-w-0 justify-center">
-          {Array.from({ length: Math.min(WIN, slots) }, (_, k) => o + k).map(idx => {
-            if (idx > j.steps.length) return null;
-            if (idx === j.steps.length) return (
-              <React.Fragment key="add">
-                <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch">
-                  <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
-                  <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
-                          value="" onChange={e => { if (e.target.value) { addStep(j.id, e.target.value); setOff(maxOff + 1); } }}>
-                    <option value="">choose page…</option>
-                    {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>
-                </div>
-                <Arrow color={color} />
-              </React.Fragment>
-            );
-            const st = j.steps[idx];
-            const p = pageOf(st.pageId);
-            return (
-              <React.Fragment key={idx}>
-                <div className="w-[200px] shrink-0">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: color }}>{idx + 1}</span>
-                    <span className="text-[12px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
-                    <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, idx)}>×</button>
+        <div ref={wrapRef} className="overflow-hidden select-none" style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+             onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
+          <div ref={rowRef} className="flex items-start gap-1 p-5 pt-2 w-max"
+               style={{ transform: `translateX(${z.x}px) scale(${z.k})`, transformOrigin: "0 0" }}>
+            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
+              <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Entry</div>
+              <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
+                        placeholder="Where does this journey begin?"
+                        value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
+            </div>
+            <Arrow color={color} />
+            {j.steps.map((st, i) => {
+              const p = pageOf(st.pageId);
+              return (
+                <React.Fragment key={i}>
+                  <div className="w-[200px] shrink-0">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: color }}>{i + 1}</span>
+                      <span className="text-[12px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
+                      <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>
+                    </div>
+                    {p ? <MiniStack page={p} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
+                    <textarea className="autogrow mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 min-h-[54px]"
+                              placeholder="What do they do here? Evidence?"
+                              value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
                   </div>
-                  {p ? <MiniStack page={p} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
-                  <textarea className="mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 resize-none min-h-[54px]"
-                            placeholder="What do they do here? Evidence?"
-                            value={st.note} onChange={e => patchStep(j.id, idx, e.target.value)} />
-                </div>
-                <Arrow color={color} />
-              </React.Fragment>
-            );
-          })}
-        </div>
-        <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
-          <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
-          <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
-                    placeholder="Where does it end?"
-                    value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
+                  <Arrow color={color} />
+                </React.Fragment>
+              );
+            })}
+            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch">
+              <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
+              <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
+                      value="" onChange={e => { if (e.target.value) addStep(j.id, e.target.value); }}>
+                <option value="">choose page…</option>
+                {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>
+            </div>
+            <Arrow color={color} />
+            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
+              <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
+              <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
+                        placeholder="Where does it end?"
+                        value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
