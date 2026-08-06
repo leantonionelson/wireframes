@@ -454,7 +454,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
 
-      {detailPage && <DetailModal page={detailPage} setPageNote={setPageNote} patchBlock={patchBlock} onClose={() => setDetailPageId(null)} />}
+      {detailPage && <DetailModal page={detailPage} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
       {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab}
         patchPersona={patchPersona} addPersona={addPersona} deletePersona={deletePersona}
         patchJourney={patchJourney} patchStep={patchStep} addStep={appendStep} removeStep={removeStep}
@@ -570,10 +570,11 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild }: {
 }
 
 /* ---------- read & copy detail modal ---------- */
-function DetailModal({ page, setPageNote, patchBlock, onClose }: {
+function DetailModal({ page, setPageNote, patchBlock, addBlk, onClose }: {
   page: Page;
   setPageNote: (pid: string, n: string) => void;
   patchBlock: (pid: string, bid: string, patch: Partial<Block>) => void;
+  addBlk: () => void;
   onClose: () => void;
 }) {
   return (
@@ -635,11 +636,14 @@ function DetailModal({ page, setPageNote, patchBlock, onClose }: {
                   const c = COLOR_STYLES[b.color];
                   return (
                     <div key={b.id} className="rounded px-1.5 pt-1 pb-0.5" style={{ background: c.bg, color: c.fg }}>
-                      <div className="text-[10px] font-semibold truncate">{b.label}</div>
+                      <input className="w-full text-[10px] font-semibold bg-transparent outline-none" style={{ color: c.fg }}
+                             value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
                       <Glyph id={b.glyph} />
                     </div>
                   );
                 })}
+                <button className="text-[10px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
+                        onClick={addBlk}>+ block</button>
               </div>
             </div>
           </div>
