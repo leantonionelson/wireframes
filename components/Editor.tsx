@@ -767,6 +767,7 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   record: (jid: string) => void;
   onClose: () => void;
 }) {
+  const [offs, setOffs] = useState<Record<string, number>>({});
   const intent = doc.personas.find(p => p.id === tab) ?? doc.personas[0] ?? null;
   const journeys = intent ? doc.journeys.filter(j => j.personaId === intent.id) : [];
   return (
@@ -813,12 +814,27 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
             </div>
             {journeys.map(j => (
               <JourneyBoard key={j.id} j={j} color={intent.color} intentName={intent.name} pages={doc.pages}
+                off={offs[j.id] ?? 0} setOff={(n: number) => setOffs(sp => ({ ...sp, [j.id]: n }))}
                 patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
                 deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
             ))}
             <div className="sticky bottom-0 px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
               <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
                       onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
+              {journeys.filter(jj => jj.steps.length + 1 > 3).map(jj => {
+                const mo = jj.steps.length + 1 - 3;
+                const o = Math.min(offs[jj.id] ?? 0, mo);
+                return (
+                  <div key={jj.id} className="flex items-center gap-1.5 ml-3">
+                    {journeys.length > 1 && <span className="tk text-[10px] text-[var(--muted)] max-w-[110px] truncate">{jj.name}</span>}
+                    <button className={`w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] ${o > 0 ? "text-[var(--ink)] hover:bg-[var(--hover)]" : "text-[var(--border)]"}`}
+                            disabled={o === 0} onClick={() => setOffs(sp => ({ ...sp, [jj.id]: Math.max(0, o - 1) }))} aria-label="Previous steps">‹</button>
+                    <span className="tk text-[10px] text-[var(--muted)] tabular-nums">steps {o + 1}–{Math.min(o + 3, jj.steps.length)} / {jj.steps.length}</span>
+                    <button className={`w-8 h-8 flex items-center justify-center rounded-full border border-[var(--border)] ${o < mo ? "text-[var(--ink)] hover:bg-[var(--hover)]" : "text-[var(--border)]"}`}
+                            disabled={o >= mo} onClick={() => setOffs(sp => ({ ...sp, [jj.id]: Math.min(mo, o + 1) }))} aria-label="Next steps">›</button>
+                  </div>
+                );
+              })}
               {doc.personas.length > 1 && (() => {
                 const idx = doc.personas.findIndex(p => p.id === intent.id);
                 return (
@@ -839,7 +855,7 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   );
 }
 
-function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record }: {
+function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record, off, setOff }: {
   j: Journey; color: string; intentName: string; pages: Page[];
   patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
   patchStep: (jid: string, idx: number, note: string) => void;
@@ -848,11 +864,11 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
   deleteJourney: (jid: string) => void;
   active: string | null; setActive: (id: string | null) => void;
   record: (jid: string) => void;
+  off: number; setOff: (n: number) => void;
 }) {
   const pageOf = (pid: string) => pages.find(p => p.id === pid);
   const pageName = (pid: string) => pageOf(pid)?.name ?? "(deleted)";
   const WIN = 3;
-  const [off, setOff] = useState(0);
   const slots = j.steps.length + 1; // steps plus the add-step card
   const maxOff = Math.max(0, slots - WIN);
   const o = Math.min(off, maxOff);
@@ -883,10 +899,6 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
                     value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
         </div>
         <Arrow color={color} />
-        {maxOff > 0 && (
-          <button className={`self-center w-8 h-8 shrink-0 flex items-center justify-center rounded-full border border-[var(--border)] ${o > 0 ? "text-[var(--ink)] hover:bg-[var(--hover)]" : "text-[var(--border)]"}`}
-                  disabled={o === 0} onClick={() => setOff(Math.max(0, o - 1))} aria-label="Previous steps">‹</button>
-        )}
         <div className="flex items-start gap-1 flex-1 min-w-0 justify-center">
           {Array.from({ length: Math.min(WIN, slots) }, (_, k) => o + k).map(idx => {
             if (idx > j.steps.length) return null;
@@ -924,10 +936,6 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
             );
           })}
         </div>
-        {maxOff > 0 && (
-          <button className={`self-center w-8 h-8 shrink-0 flex items-center justify-center rounded-full border border-[var(--border)] ${o < maxOff ? "text-[var(--ink)] hover:bg-[var(--hover)]" : "text-[var(--border)]"}`}
-                  disabled={o >= maxOff} onClick={() => setOff(Math.min(maxOff, o + 1))} aria-label="Next steps">›</button>
-        )}
         <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
           <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
           <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
@@ -935,9 +943,6 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
                     value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
         </div>
       </div>
-      {maxOff > 0 && (
-        <div className="tk text-[10px] text-[var(--muted)] text-center pb-3">steps {o + 1}–{Math.min(o + WIN, j.steps.length)} of {j.steps.length}</div>
-      )}
     </div>
   );
 }
