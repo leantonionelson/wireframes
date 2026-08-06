@@ -44,11 +44,16 @@ export interface Persona {
   desc: string;
 }
 
+export interface JourneyStep { pageId: string; note: string }
+
 export interface Journey {
   id: string;
   personaId: string;
   name: string;
-  steps: string[]; // ordered pageIds
+  goal: string;   // what the persona is trying to achieve
+  entry: string;  // where the journey begins (channel, system)
+  exit: string;   // where it ends (destination, hand-off)
+  steps: JourneyStep[];
 }
 
 export interface Doc {
@@ -66,7 +71,13 @@ export const PERSONA_COLORS = ["#8b5cf6", "#f59e0b", "#0ea5e9", "#10b981", "#ef4
 
 // Older documents predate personas/journeys; normalise on read.
 export function normDoc(d: Doc): Doc {
-  return { ...d, personas: d.personas ?? [], journeys: d.journeys ?? [] };
+  const journeys = (d.journeys ?? []).map(j => ({
+    ...j,
+    goal: j.goal ?? "", entry: j.entry ?? "", exit: j.exit ?? "",
+    steps: ((j.steps ?? []) as unknown as (string | JourneyStep)[]).map(s =>
+      typeof s === "string" ? { pageId: s, note: "" } : s),
+  }));
+  return { ...d, personas: d.personas ?? [], journeys };
 }
 
 export const COLOR_STYLES: Record<ColorRole, { bg: string; fg: string; label: string }> = {

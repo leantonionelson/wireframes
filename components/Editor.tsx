@@ -65,7 +65,8 @@ export default function Editor({ projectId }: { projectId: string }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [detailPageId, setDetailPageId] = useState<string | null>(null);
   const [recording, setRecording] = useState<string | null>(null);
-  const [visible, setVisible] = useState<Set<string>>(new Set());
+  const [active, setActive] = useState<string | null>(null);
+  const [storyId, setStoryId] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("loading");
   const [me, setMe] = useState("");
@@ -74,7 +75,6 @@ export default function Editor({ projectId }: { projectId: string }) {
   const dirtyRef = useRef(false);
   dirtyRef.current = dirty;
   const history = useRef<{ past: Snap[]; future: Snap[] }>({ past: [], future: [] });
-  const visInit = useRef(false);
 
   useEffect(() => {
     setMe(localStorage.getItem("scaffold.name") || localStorage.getItem("octo.name") || "anon");
@@ -96,10 +96,6 @@ export default function Editor({ projectId }: { projectId: string }) {
     }, 4000);
     return () => { stop = true; clearInterval(t); };
   }, [projectId]);
-
-  useEffect(() => {
-    if (doc && !visInit.current) { visInit.current = true; setVisible(new Set(doc.journeys.map(j => j.id))); }
-  }, [doc]);
 
   /* ---------- save & undo machinery ---------- */
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -157,7 +153,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
       }
-      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); }
+      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setStoryId(null); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -234,7 +230,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       const walk = (x: string) => { doomed.add(x); d.pages.filter(p => p.parentId === x).forEach(c => walk(c.id)); };
       walk(pid);
       d.pages = d.pages.filter(p => !doomed.has(p.id));
-      d.journeys.forEach(j => { j.steps = j.steps.filter(s => !doomed.has(s)); });
+      d.journeys.forEach(j => { j.steps = j.steps.filter(s => !doomed.has(s.pageId)); });
       return d;
     });
     setSel(null); if (panel === "inspector") setPanel(null);
@@ -286,21 +282,28 @@ export default function Editor({ projectId }: { projectId: string }) {
   });
   const addJourney = (name: string, personaId: string) => {
     const jid = uid();
-    mutate(d => { d.journeys.push({ id: jid, personaId, name, steps: [] }); return d; });
-    setVisible(v => new Set(v).add(jid));
+    mutate(d => { d.journeys.push({ id: jid, personaId, name, goal: "", entry: "", exit: "", steps: [] }); return d; });
+    setActive(jid);
     setRecording(jid);
   };
   const appendStep = (jid: string, pageId: string) => mutate(d => {
     const j = d.journeys.find(j => j.id === jid);
-    if (j && j.steps[j.steps.length - 1] !== pageId) j.steps.push(pageId);
+    if (j && j.steps[j.steps.length - 1]?.pageId !== pageId) j.steps.push({ pageId, note: "" });
     return d;
   });
+  const patchStep = (jid: string, idx: number, note: string) => mutate(d => {
+    const j = d.journeys.find(j => j.id === jid);
+    if (j && j.steps[idx]) j.steps[idx].note = note;
+    return d;
+  });
+  const patchJourney = (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) =>
+    mutate(d => { const j = d.journeys.find(j => j.id === jid); if (j) Object.assign(j, patch); return d; });
   const removeStep = (jid: string, idx: number) => mutate(d => {
     const j = d.journeys.find(j => j.id === jid);
     if (j) j.steps.splice(idx, 1);
     return d;
   });
-  const deleteJourney = (jid: string) => { mutate(d => { d.journeys = d.journeys.filter(j => j.id !== jid); return d; }); if (recording === jid) setRecording(null); };
+  const deleteJourney = (jid: string) => { mutate(d => { d.journeys = d.journeys.filter(j => j.id !== jid); return d; }); if (recording === jid) setRecording(null); if (active === jid) setActive(null); if (storyId === jid) setStoryId(null); };
 
   const exportPng = async () => {
     const node = canvasRef.current?.querySelector(".tree") as HTMLElement | null;
@@ -336,7 +339,8 @@ export default function Editor({ projectId }: { projectId: string }) {
   };
   const roots = childrenOf.get(null) ?? [];
   const pillBtn = "w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)] hover:text-[var(--ink)]";
-  const visJourneys = doc.journeys.filter(j => visible.has(j.id));
+  const activeJourney = doc.journeys.find(j => j.id === active) ?? null;
+  const storyJourney = doc.journeys.find(j => j.id === storyId) ?? null;
 
   return (
     <div className="h-screen relative bg-[var(--bg)] text-[var(--ink)] overflow-hidden">
@@ -351,7 +355,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      <JourneyOverlay journeys={visJourneys} personas={doc.personas} deps={[view, doc, visible]} />
+      {activeJourney && <JourneyOverlay journey={activeJourney} personas={doc.personas} deps={[view, doc, active]} />}
 
       {/* top-left: project identity */}
       <div className="cluster absolute top-4 left-4 z-20 flex items-center gap-2.5 pl-4 pr-3.5 py-2 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg max-w-[46vw]">
@@ -447,41 +451,41 @@ export default function Editor({ projectId }: { projectId: string }) {
         <HistoryPanel projectId={projectId} me={me} close={() => setPanel(null)} restore={restoreVersion} />
       )}
       {panel === "journeys" && (
-        <JourneysPanel doc={doc} visible={visible} setVisible={setVisible}
+        <JourneysPanel doc={doc} active={active} setActive={setActive}
           recording={recording} setRecording={setRecording}
           addPersona={addPersona} deletePersona={deletePersona}
           addJourney={addJourney} removeStep={removeStep} deleteJourney={deleteJourney}
+          openStory={setStoryId}
           close={() => setPanel(null)} />
       )}
 
       {detailPage && <DetailModal page={detailPage} onClose={() => setDetailPageId(null)} />}
+      {storyJourney && <StoryboardModal journey={storyJourney} persona={doc.personas.find(p => p.id === storyJourney.personaId)}
+        pages={doc.pages} patchJourney={patchJourney} patchStep={patchStep} onClose={() => setStoryId(null)} />}
     </div>
   );
 }
 
-/* ---------- journey overlay ---------- */
+/* ---------- journey overlay: one trace at a time ---------- */
 type Seg = { d: string; color: string };
 type Badge = { x: number; y: number; n: number; color: string };
-function JourneyOverlay({ journeys, personas, deps }: { journeys: Journey[]; personas: Persona[]; deps: unknown[] }) {
+function JourneyOverlay({ journey, personas, deps }: { journey: Journey; personas: Persona[]; deps: unknown[] }) {
   const [segs, setSegs] = useState<Seg[]>([]);
   const [badges, setBadges] = useState<Badge[]>([]);
   useLayoutEffect(() => {
     const S: Seg[] = [];
     const B: Badge[] = [];
-    journeys.forEach((j, ji) => {
-      const color = personas.find(p => p.id === j.personaId)?.color ?? "#8b5cf6";
-      const lane = (ji - (journeys.length - 1) / 2) * 14;
-      const rects = j.steps.map(pid => document.getElementById(`page-${pid}`)?.getBoundingClientRect() ?? null);
-      rects.forEach((r, i) => {
-        if (!r) return;
-        B.push({ x: r.left + 14 + ji * 20, y: r.top, n: i + 1, color });
-        const nr = rects[i + 1];
-        if (!nr) return;
-        const ax = r.left + r.width / 2 + lane, ay = r.bottom;
-        const bx = nr.left + nr.width / 2 + lane, by = nr.top;
-        const dy = Math.max(40, Math.min(120, Math.abs(by - ay) / 2));
-        S.push({ d: `M ${ax} ${ay} C ${ax} ${ay + dy}, ${bx} ${by - dy}, ${bx} ${by}`, color });
-      });
+    const color = personas.find(p => p.id === journey.personaId)?.color ?? "#8b5cf6";
+    const rects = journey.steps.map(st => document.getElementById(`page-${st.pageId}`)?.getBoundingClientRect() ?? null);
+    rects.forEach((r, i) => {
+      if (!r) return;
+      B.push({ x: r.left + 14, y: r.top, n: i + 1, color });
+      const nr = rects[i + 1];
+      if (!nr) return;
+      const ax = r.left + r.width / 2, ay = r.bottom;
+      const bx = nr.left + nr.width / 2, by = nr.top;
+      const dy = Math.max(40, Math.min(120, Math.abs(by - ay) / 2));
+      S.push({ d: `M ${ax} ${ay} C ${ax} ${ay + dy}, ${bx} ${by - dy}, ${bx} ${by}`, color });
     });
     setSegs(S); setBadges(B);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -489,11 +493,7 @@ function JourneyOverlay({ journeys, personas, deps }: { journeys: Journey[]; per
   if (!segs.length && !badges.length) return null;
   return (
     <svg className="fixed inset-0 z-10 pointer-events-none" width="100%" height="100%">
-      {segs.map((s, i) => (
-        <g key={i}>
-          <path d={s.d} stroke={s.color} strokeWidth="2.5" fill="none" strokeDasharray="7 5" opacity="0.9" />
-        </g>
-      ))}
+      {segs.map((s, i) => <path key={i} d={s.d} stroke={s.color} strokeWidth="2.5" fill="none" strokeDasharray="7 5" opacity="0.9" />)}
       {badges.map((b, i) => (
         <g key={"b" + i}>
           <circle cx={b.x} cy={b.y} r="9" fill={b.color} />
@@ -686,15 +686,125 @@ function HistoryPanel({ projectId, me, close, restore }: {
   );
 }
 
+/* ---------- mini wireframe stack ---------- */
+function MiniStack({ page }: { page: Page }) {
+  return (
+    <div className="rounded-xl bg-[var(--card)] border-2 border-[var(--card-border)] overflow-hidden">
+      <div className="text-center font-bold text-[11px] text-[var(--accent)] py-1 px-1 truncate">{page.name}</div>
+      <div className="p-1 pt-0 flex flex-col gap-[3px]">
+        {page.blocks.map(b => {
+          const c = COLOR_STYLES[b.color];
+          return (
+            <div key={b.id} className="rounded px-1 pt-0.5" style={{ background: c.bg, color: c.fg }}>
+              <div className="text-[8.5px] font-semibold truncate leading-tight">{b.label}</div>
+              <Glyph id={b.glyph} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- journey storyboard ---------- */
+function journeyToText(j: Journey, personaName: string, pageName: (pid: string) => string): string {
+  const lines = [`# ${j.name} (${personaName})`, ""];
+  if (j.goal) lines.push(`Goal: ${j.goal}`);
+  if (j.entry) lines.push(`Entry: ${j.entry}`);
+  lines.push("");
+  j.steps.forEach((s, i) => {
+    lines.push(`${i + 1}. ${pageName(s.pageId)}${s.note ? ` — ${s.note}` : ""}`);
+  });
+  if (j.exit) lines.push("", `Exit: ${j.exit}`);
+  return lines.join("\n");
+}
+
+const Arrow = ({ color }: { color: string }) => (
+  <svg width="34" height="16" viewBox="0 0 34 16" className="shrink-0 self-center" aria-hidden="true">
+    <line x1="2" y1="8" x2="26" y2="8" stroke={color} strokeWidth="2" strokeDasharray="5 4" />
+    <path d="M25 3l6 5-6 5" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+function StoryboardModal({ journey, persona, pages, patchJourney, patchStep, onClose }: {
+  journey: Journey; persona: Persona | undefined; pages: Page[];
+  patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
+  patchStep: (jid: string, idx: number, note: string) => void;
+  onClose: () => void;
+}) {
+  const color = persona?.color ?? "#8b5cf6";
+  const pageOf = (pid: string) => pages.find(p => p.id === pid);
+  const pageName = (pid: string) => pageOf(pid)?.name ?? "(deleted)";
+  return (
+    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
+      <div className="panel w-full max-w-6xl max-h-[92vh] rounded-3xl bg-[var(--panel)] backdrop-blur-2xl border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
+           onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
+          <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ background: color }} />
+          <input className="text-lg font-bold bg-transparent outline-none min-w-0 flex-1" value={journey.name}
+                 onChange={e => patchJourney(journey.id, { name: e.target.value })} />
+          <span className="tk text-[11px] text-[var(--muted)] shrink-0">{persona?.name ?? "no persona"}</span>
+          <CopyBtn text={journeyToText(journey, persona?.name ?? "", pageName)} label="Copy" />
+          <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
+        </div>
+        <div className="px-6 py-3 border-b border-[var(--border)] flex items-center gap-3">
+          <span className="tk text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">Goal</span>
+          <input className="flex-1 bg-transparent outline-none text-[13.5px] border-b border-transparent focus:border-[var(--border)]"
+                 placeholder="What is this persona trying to achieve?"
+                 value={journey.goal} onChange={e => patchJourney(journey.id, { goal: e.target.value })} />
+        </div>
+        <div className="flex-1 overflow-x-auto overflow-y-auto">
+          <div className="flex items-start gap-1 p-6 min-w-max">
+            {/* entry */}
+            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
+              <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Entry</div>
+              <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
+                        placeholder="Where does this journey begin? Channel, referrer, system…"
+                        value={journey.entry} onChange={e => patchJourney(journey.id, { entry: e.target.value })} />
+            </div>
+            <Arrow color={color} />
+            {journey.steps.map((st, i) => {
+              const p = pageOf(st.pageId);
+              return (
+                <React.Fragment key={i}>
+                  <div className="w-[200px] shrink-0">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center" style={{ background: color }}>{i + 1}</span>
+                      <span className="text-[12px] font-semibold truncate">{pageName(st.pageId)}</span>
+                    </div>
+                    {p ? <MiniStack page={p} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
+                    <textarea className="mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 resize-none min-h-[54px]"
+                              placeholder="What do they do here? Evidence?"
+                              value={st.note} onChange={e => patchStep(journey.id, i, e.target.value)} />
+                  </div>
+                  <Arrow color={color} />
+                </React.Fragment>
+              );
+            })}
+            {/* exit */}
+            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
+              <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
+              <textarea className="w-full bg-transparent outline-none text-[12.5px] leading-snug resize-none min-h-[84px]"
+                        placeholder="Where does it end? Hand-off, destination, system…"
+                        value={journey.exit} onChange={e => patchJourney(journey.id, { exit: e.target.value })} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- personas & journeys panel ---------- */
-function JourneysPanel({ doc, visible, setVisible, recording, setRecording, addPersona, deletePersona, addJourney, removeStep, deleteJourney, close }: {
-  doc: Doc; visible: Set<string>; setVisible: (s: Set<string>) => void;
+function JourneysPanel({ doc, active, setActive, recording, setRecording, addPersona, deletePersona, addJourney, removeStep, deleteJourney, openStory, close }: {
+  doc: Doc; active: string | null; setActive: (id: string | null) => void;
   recording: string | null; setRecording: (id: string | null) => void;
   addPersona: (name: string, color: string, desc: string) => void;
   deletePersona: (id: string) => void;
   addJourney: (name: string, personaId: string) => void;
   removeStep: (jid: string, idx: number) => void;
   deleteJourney: (jid: string) => void;
+  openStory: (jid: string) => void;
   close: () => void;
 }) {
   const [pName, setPName] = useState("");
@@ -702,11 +812,6 @@ function JourneysPanel({ doc, visible, setVisible, recording, setRecording, addP
   const [jName, setJName] = useState("");
   const [jPersona, setJPersona] = useState("");
   const pageName = (pid: string) => doc.pages.find(p => p.id === pid)?.name ?? "(deleted)";
-  const toggle = (jid: string) => {
-    const next = new Set(visible);
-    if (next.has(jid)) next.delete(jid); else next.add(jid);
-    setVisible(next);
-  };
   return (
     <aside className="panel absolute top-[68px] right-4 bottom-4 w-[360px] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden z-30">
       <div className="flex items-center px-4 py-2.5 border-b border-[var(--border)]">
@@ -731,7 +836,7 @@ function JourneysPanel({ doc, visible, setVisible, recording, setRecording, addP
                    value={pName} onChange={e => setPName(e.target.value)} />
             <div className="flex gap-1">
               {PERSONA_COLORS.map(c => (
-                <button key={c} className={`w-4.5 h-4.5 w-[18px] h-[18px] rounded-full ${pColor === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
+                <button key={c} className={`w-[18px] h-[18px] rounded-full ${pColor === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
                         style={{ background: c }} onClick={() => setPColor(c)} />
               ))}
             </div>
@@ -742,17 +847,21 @@ function JourneysPanel({ doc, visible, setVisible, recording, setRecording, addP
 
         <div>
           <div className="tk text-[10px] font-semibold uppercase tracking-widest text-[var(--muted)] mb-2">Journeys</div>
+          <p className="tk text-[10px] text-[var(--muted)] mb-2">The eye traces one journey on the canvas. The board icon opens its storyboard.</p>
           <div className="space-y-2 mb-3">
             {doc.journeys.map(j => {
               const per = doc.personas.find(p => p.id === j.personaId);
               return (
-                <div key={j.id} className={`border rounded-xl px-3 py-2 ${recording === j.id ? "border-red-500/70" : "border-[var(--border)]"}`}>
+                <div key={j.id} className={`border rounded-xl px-3 py-2 ${recording === j.id ? "border-red-500/70" : active === j.id ? "border-[var(--accent)]" : "border-[var(--border)]"}`}>
                   <div className="flex items-center gap-2">
-                    <button className="text-[var(--muted)] hover:text-[var(--ink)]" title="Show / hide on canvas" onClick={() => toggle(j.id)}>
-                      {visible.has(j.id) ? ICONS.eye : ICONS.eyeOff}
+                    <button className={active === j.id ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--ink)]"}
+                            title="Trace on canvas" onClick={() => setActive(active === j.id ? null : j.id)}>
+                      {active === j.id ? ICONS.eye : ICONS.eyeOff}
                     </button>
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: per?.color ?? "#888" }} />
-                    <span className="flex-1 truncate font-medium">{j.name}</span>
+                    <button className="flex-1 min-w-0 truncate font-medium text-left hover:text-[var(--accent)]" title="Open storyboard"
+                            onClick={() => openStory(j.id)}>{j.name}</button>
+                    <button className="text-[var(--muted)] hover:text-[var(--accent)]" title="Open storyboard" onClick={() => openStory(j.id)}>{ICONS.detail}</button>
                     <button className={`text-[11px] px-2 py-0.5 rounded-full border ${recording === j.id ? "border-red-500 text-red-500" : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)]"}`}
                             onClick={() => setRecording(recording === j.id ? null : j.id)}>
                       {recording === j.id ? "Stop" : "Record"}
@@ -761,9 +870,9 @@ function JourneysPanel({ doc, visible, setVisible, recording, setRecording, addP
                   </div>
                   {j.steps.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {j.steps.map((s, i) => (
+                      {j.steps.map((st, i) => (
                         <span key={i} className="flex items-center gap-1 text-[10.5px] bg-[var(--hover)] border border-[var(--border)] rounded-full pl-2 pr-1 py-0.5">
-                          <b>{i + 1}</b> {pageName(s)}
+                          <b>{i + 1}</b> {pageName(st.pageId)}
                           <button className="text-[var(--muted)] hover:text-red-500 px-0.5" onClick={() => removeStep(j.id, i)}>×</button>
                         </span>
                       ))}

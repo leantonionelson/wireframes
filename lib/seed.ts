@@ -136,9 +136,35 @@ const personas: Persona[] = [
 ];
 
 const journeys: Journey[] = [
-  { id: "jn-exp", personaId: "per-exp", name: "Find a role and apply", steps: [home.id, jobsearch.id, sf.id] },
-  { id: "jn-early", personaId: "per-early", name: "Explore and decide", steps: [home.id, wycdh.id, wiltwh.id, faq.id, jobsearch.id] },
-  { id: "jn-return", personaId: "per-return", name: "Post-application return", steps: [sf.id, postApply.id, faq.id] },
+  { id: "jn-exp", personaId: "per-exp", name: "Find a role and apply",
+    goal: "Reach a relevant local role with minimum friction.",
+    entry: "Google search, \"EY careers\". Natural search is 41% of known-source visits.",
+    exit: "SuccessFactors application portal. The return link must carry market context.",
+    steps: [
+      { pageId: home.id, note: "Clicks Find jobs almost immediately. 77% of in-page clicks." },
+      { pageId: jobsearch.id, note: "Takes the experienced route, 50% of the dropdown clicks." },
+      { pageId: sf.id, note: "Crosses into the job board and applies." },
+    ] },
+  { id: "jn-early", personaId: "per-early", name: "Explore and decide",
+    goal: "Work out what EY is and whether they would fit.",
+    entry: "General or campus search, low role specificity.",
+    exit: "Job search, or the Talent Community if nothing fits yet.",
+    steps: [
+      { pageId: home.id, note: "Takes the Explore careers path from the hero." },
+      { pageId: wycdh.id, note: "Service-line discovery. Depth on the Parthenon model." },
+      { pageId: wiltwh.id, note: "Culture proof. The Barometer's weakest EVP areas answered here." },
+      { pageId: faq.id, note: "Questions in their own words, extraction-ready." },
+      { pageId: jobsearch.id, note: "Early careers route, 29% of the dropdown." },
+    ] },
+  { id: "jn-return", personaId: "per-return", name: "Post-application return",
+    goal: "Resume, research the firm, or find the next role after applying.",
+    entry: "SuccessFactors return link. 242,466 visits, a quarter of the page.",
+    exit: "FAQ answers, Talent Community, or status via My EY.",
+    steps: [
+      { pageId: sf.id, note: "Completes or abandons an application." },
+      { pageId: postApply.id, note: "Lands in a just-applied state instead of the generic homepage." },
+      { pageId: faq.id, note: "What happens after I apply, answered before they have to ask." },
+    ] },
 ];
 
 export function seedDoc(): Doc {
