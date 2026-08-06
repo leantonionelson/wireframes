@@ -454,7 +454,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
 
-      {detailPage && <DetailModal page={detailPage} onClose={() => setDetailPageId(null)} />}
+      {detailPage && <DetailModal page={detailPage} setPageNote={setPageNote} patchBlock={patchBlock} onClose={() => setDetailPageId(null)} />}
       {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab}
         patchPersona={patchPersona} addPersona={addPersona} deletePersona={deletePersona}
         patchJourney={patchJourney} patchStep={patchStep} addStep={appendStep} removeStep={removeStep}
@@ -570,7 +570,12 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild }: {
 }
 
 /* ---------- read & copy detail modal ---------- */
-function DetailModal({ page, onClose }: { page: Page; onClose: () => void }) {
+function DetailModal({ page, setPageNote, patchBlock, onClose }: {
+  page: Page;
+  setPageNote: (pid: string, n: string) => void;
+  patchBlock: (pid: string, bid: string, patch: Partial<Block>) => void;
+  onClose: () => void;
+}) {
   return (
     <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
       <div className="panel w-full max-w-5xl max-h-[90vh] rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
@@ -585,24 +590,31 @@ function DetailModal({ page, onClose }: { page: Page; onClose: () => void }) {
         </div>
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {page.note && (
-              <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <h3 className="font-bold text-[15px] text-[var(--ink)]">About this page</h3>
-                  <CopyBtn text={page.note} />
-                </div>
-                <p className="text-[13.5px] leading-relaxed text-[var(--ink)] whitespace-pre-wrap">{page.note}</p>
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h3 className="font-bold text-[15px] text-[var(--ink)]">About this page</h3>
+                <CopyBtn text={page.note} />
               </div>
-            )}
+              <textarea className="w-full bg-transparent outline-none resize-none text-[13.5px] leading-relaxed text-[var(--ink)] min-h-[72px]"
+                        placeholder="Purpose of the page, user needs, evidence…"
+                        value={page.note} onChange={e => setPageNote(page.id, e.target.value)} />
+            </div>
             {page.blocks.map(b => (
               <div key={b.id} className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
                 <div className="flex items-start justify-between gap-3 mb-2">
-                  <h3 className="font-bold text-[15px]" style={{ color: COLOR_STYLES[b.color].bg }}>{b.label}</h3>
+                  <input className="font-bold text-[15px] bg-transparent outline-none flex-1 min-w-0" style={{ color: COLOR_STYLES[b.color].bg }}
+                         value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
                   <CopyBtn text={[b.label, b.note, b.component && `Component: ${b.component}`, b.flag && `FLAG: ${b.flag}`].filter(Boolean).join("\n")} />
                 </div>
-                {b.note && <p className="text-[13.5px] leading-relaxed text-[var(--ink)] whitespace-pre-wrap mb-2">{b.note}</p>}
-                {b.component && <p className="tk text-[11px] text-[var(--muted)]">{b.component}</p>}
-                {b.flag && <p className="text-[13px] text-red-500 font-medium mt-2">{b.flag}</p>}
+                <textarea className="w-full bg-transparent outline-none resize-none text-[13.5px] leading-relaxed text-[var(--ink)] mb-1 min-h-[44px]"
+                          placeholder="Purpose, user needs, content status…"
+                          value={b.note} onChange={e => patchBlock(page.id, b.id, { note: e.target.value })} />
+                <input className="tk w-full text-[11px] text-[var(--muted)] bg-transparent outline-none"
+                       placeholder="Component, e.g. AEM: Promotional Banner"
+                       value={b.component} onChange={e => patchBlock(page.id, b.id, { component: e.target.value })} />
+                <input className="w-full text-[13px] text-red-500 font-medium mt-1.5 bg-transparent outline-none placeholder:text-red-300"
+                       placeholder="Red flag: custom component or pending decision…"
+                       value={b.flag} onChange={e => patchBlock(page.id, b.id, { flag: e.target.value })} />
                 {b.comments.length > 0 && (
                   <div className="mt-3 space-y-1.5">
                     {b.comments.map(c => (
