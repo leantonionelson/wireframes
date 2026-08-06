@@ -1,4 +1,4 @@
-import type { Doc, Page, Block, GlyphId, ColorRole } from "./model";
+import type { Doc, Page, Block, GlyphId, ColorRole, Persona, Journey } from "./model";
 
 // Seed: EY Global Careers, from the Tonic build sheet (July 2026 analysis).
 let n = 0;
@@ -129,6 +129,18 @@ const sf = page("careers.ey.com / SuccessFactors", home.id, 5,
     b("Return link, market-aware", "linker", { color: "external", flag: "With EY: what sets it, why it defaults to UK, can it follow the candidate's market." }),
   ], true);
 
+const personas: Persona[] = [
+  { id: "per-exp", name: "Experienced professional", color: "#8b5cf6", desc: "Knows the market, wants relevant local roles fast. Half of job-search dropdown clicks." },
+  { id: "per-early", name: "Early careers", color: "#f59e0b", desc: "Exploring what EY is and whether they fit. 29% of job-search dropdown clicks; strongest demand signal in every market." },
+  { id: "per-return", name: "Returning applicant", color: "#10b981", desc: "Back from the application system. A quarter of all visits; researching the firm or checking status." },
+];
+
+const journeys: Journey[] = [
+  { id: "jn-exp", personaId: "per-exp", name: "Find a role and apply", steps: [home.id, jobsearch.id, sf.id] },
+  { id: "jn-early", personaId: "per-early", name: "Explore and decide", steps: [home.id, wycdh.id, wiltwh.id, faq.id, jobsearch.id] },
+  { id: "jn-return", personaId: "per-return", name: "Post-application return", steps: [sf.id, postApply.id, faq.id] },
+];
+
 export function seedDoc(): Doc {
   return {
     id: "ey-global-careers",
@@ -137,5 +149,7 @@ export function seedDoc(): Doc {
     updatedAt: Date.now(),
     updatedBy: "seed",
     pages: [home, jobsearch, wycdh, slTemplate, wiltwh, htju, postApply, faq, sf],
+    personas,
+    journeys,
   };
 }

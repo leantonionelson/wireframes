@@ -37,6 +37,20 @@ export interface Page {
   blocks: Block[];
 }
 
+export interface Persona {
+  id: string;
+  name: string;
+  color: string;   // hex
+  desc: string;
+}
+
+export interface Journey {
+  id: string;
+  personaId: string;
+  name: string;
+  steps: string[]; // ordered pageIds
+}
+
 export interface Doc {
   id: string;
   name: string;
@@ -44,6 +58,15 @@ export interface Doc {
   updatedAt: number;
   updatedBy: string;
   pages: Page[];
+  personas: Persona[];
+  journeys: Journey[];
+}
+
+export const PERSONA_COLORS = ["#8b5cf6", "#f59e0b", "#0ea5e9", "#10b981", "#ef4444", "#ec4899"];
+
+// Older documents predate personas/journeys; normalise on read.
+export function normDoc(d: Doc): Doc {
+  return { ...d, personas: d.personas ?? [], journeys: d.journeys ?? [] };
 }
 
 export const COLOR_STYLES: Record<ColorRole, { bg: string; fg: string; label: string }> = {
