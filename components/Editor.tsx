@@ -626,9 +626,9 @@ export default function Editor({ projectId }: { projectId: string }) {
             </>
           ) : (
             <>
-              <button className={pillBtn} title="Add block" onClick={() => addBlock(selPage.id)}>{ICONS.plus}</button>
+              {/* Adding blocks and pages lives on the card itself, and the page
+                  note is editable in the detail view. */}
               <button className={pillBtn} title="Page detail & copy" onClick={() => setDetailPageId(selPage.id)}>{ICONS.detail}</button>
-              <button className={pillBtn} title="Edit page note" onClick={() => setPanel("inspector")}>{ICONS.edit}</button>
               <span className="w-px h-5 bg-[var(--border)] mx-0.5" />
               <button className={`${pillBtn} hover:text-red-500`} title="Delete page and children"
                       onClick={() => { if (confirm(`Delete "${selPage.name}" and its children?`)) deletePage(selPage.id); }}>{ICONS.trash}</button>
