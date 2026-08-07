@@ -40,7 +40,7 @@ export function newProjectDoc(name: string): Doc {
     pages: [{ id: "root", name: "Home", parentId: null, order: 0, note: "", blocks: [
       { id: "b1", label: "Hero", glyph: "hero", color: "content", note: "", component: "", flag: "", comments: [] },
     ] }],
-    personas: [], journeys: [], notes: [],
+    personas: [], journeys: [], notes: [], members: [],
   };
 }
 

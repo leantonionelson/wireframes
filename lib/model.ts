@@ -5,9 +5,19 @@
 export type ColorRole = "header" | "nav" | "content" | "footer" | "external";
 
 export type GlyphId =
-  | "hero" | "textrows" | "text2col" | "cards3" | "cards4" | "image"
-  | "video" | "people" | "accordion" | "search" | "map" | "form"
-  | "stats" | "carousel" | "cta" | "links" | "linker" | "quote";
+  // Structure
+  | "hero" | "herosplit" | "banner" | "tabs" | "sidebar" | "breadcrumb" | "footercols"
+  // Text
+  | "textrows" | "text2col" | "article" | "quote" | "testimonial"
+  // Media
+  | "image" | "video" | "gallery" | "logos" | "split"
+  // Collections
+  | "cards3" | "cards4" | "grid2x2" | "people" | "carousel" | "related"
+  | "listrows" | "table" | "pricing"
+  // Interactive
+  | "search" | "filters" | "form" | "cta" | "accordion" | "steps" | "toggle"
+  // Wayfinding
+  | "links" | "linker" | "map" | "contact" | "stats";
 
 export interface Comment {
   id: string;
@@ -55,6 +65,16 @@ export interface PinNote {
   at: number;        // epoch ms
 }
 
+// A person working on the project. The roster is shared on the document so
+// everyone picks from the same list; which one you are is stored per browser.
+// Deliberately not an account: this is attribution, not authentication.
+export interface Member {
+  id: string;
+  name: string;
+  color: string;   // hex, cycled from PERSONA_COLORS
+  at: number;      // added, epoch ms
+}
+
 export interface Persona {
   id: string;
   name: string;
@@ -84,6 +104,15 @@ export interface Doc {
   personas: Persona[];
   journeys: Journey[];
   notes: PinNote[];
+  members: Member[];
+}
+
+/** Initials for an avatar chip: first letters of the first two words. */
+export function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "??";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export const PERSONA_COLORS = ["#8b5cf6", "#f59e0b", "#0ea5e9", "#10b981", "#ef4444", "#ec4899"];
@@ -96,7 +125,7 @@ export function normDoc(d: Doc): Doc {
     steps: ((j.steps ?? []) as unknown as (string | JourneyStep)[]).map(s =>
       typeof s === "string" ? { pageId: s, note: "" } : s),
   }));
-  return { ...d, personas: d.personas ?? [], journeys, notes: d.notes ?? [] };
+  return { ...d, personas: d.personas ?? [], journeys, notes: d.notes ?? [], members: d.members ?? [] };
 }
 
 export const COLOR_STYLES: Record<ColorRole, { bg: string; fg: string; label: string }> = {

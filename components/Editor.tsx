@@ -1,7 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { COLOR_STYLES, CHROME_ROLES, PERSONA_COLORS, blockStyle, readableOn, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona, type PinNote, blankBlock, uid } from "@/lib/model";
-import { GLYPHS, Glyph } from "@/lib/glyphs";
+import { COLOR_STYLES, CHROME_ROLES, PERSONA_COLORS, blockStyle, readableOn, initialsOf, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Member, type Page, type Persona, type PinNote, blankBlock, uid } from "@/lib/model";
+import { GLYPHS, GLYPH_GROUPS, Glyph } from "@/lib/glyphs";
 import { LogoMark, ScaffoldingLoader, SCAFFOLD_CYCLE_MS, ThemeToggle } from "@/components/Theme";
 import { LoginModal, logout, useAuth } from "@/components/Auth";
 
@@ -95,10 +95,18 @@ export default function Editor({ projectId }: { projectId: string }) {
     return () => clearTimeout(t);
   }, []);
 
+  // Which roster member this browser is. Falls back to the old free-text name.
+  const [meId, setMeId] = useState<string | null>(null);
   useEffect(() => {
+    setMeId(localStorage.getItem("scaffold.memberId"));
     setMe(localStorage.getItem("scaffold.name") || localStorage.getItem("octo.name") || "anon");
   }, []);
-  const changeMe = (n: string) => { setMe(n); localStorage.setItem("scaffold.name", n); };
+  const chooseMe = (id: string) => {
+    setMeId(id);
+    localStorage.setItem("scaffold.memberId", id);
+    const m = docRef.current?.members.find(m => m.id === id);
+    if (m) { setMe(m.name); localStorage.setItem("scaffold.name", m.name); }
+  };
 
   useEffect(() => {
     let stop = false;
@@ -264,6 +272,7 @@ export default function Editor({ projectId }: { projectId: string }) {
     return <ScaffoldingLoader />;
   }
 
+  const meMember = doc.members.find(m => m.id === meId) ?? null;
   const selPage = sel ? doc.pages.find(p => p.id === sel.pageId) ?? null : null;
   const selBlock = selPage && sel?.blockId ? selPage.blocks.find(b => b.id === sel.blockId) ?? null : null;
   const detailPage = detailPageId ? doc.pages.find(p => p.id === detailPageId) ?? null : null;
@@ -363,6 +372,14 @@ export default function Editor({ projectId }: { projectId: string }) {
     return d;
   });
   const deleteJourney = (jid: string) => { mutate(d => { d.journeys = d.journeys.filter(j => j.id !== jid); return d; }); if (recording === jid) setRecording(null); if (active === jid) setActive(null); };
+
+  const addMember = (name: string) => {
+    const m: Member = { id: uid(), name: name.trim(), color: PERSONA_COLORS[(docRef.current?.members.length ?? 0) % PERSONA_COLORS.length], at: Date.now() };
+    applyLocal(d => { d.members.push(m); return d; });
+    chooseMe(m.id);
+    setMe(m.name); localStorage.setItem("scaffold.name", m.name);
+    sendAnnotate({ op: "member-add", member: m });
+  };
 
   const addNote = (pageId: string, blockId: string | undefined, fx: number, fy: number) => {
     const note: PinNote = { id: uid(), pageId, blockId, fx, fy, text: "", author: me || "anon", at: Date.now() };
@@ -486,8 +503,7 @@ export default function Editor({ projectId }: { projectId: string }) {
             View only · Log in
           </button>
         )}
-        <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="You">{(me || "??").slice(0, 2).toUpperCase()}</span>
-        <input className="tk border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent text-[11px] hidden sm:block" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
+        <MemberPicker members={doc.members} meId={meId} setMeId={chooseMe} addMember={addMember} />
         {auth.enabled && auth.authed && (
           <button className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" title="Log out"
                   onClick={async () => { await logout(); auth.refresh(); }}>
@@ -621,6 +637,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         record={(jid) => { setRecording(jid); setWsOpen(false); }}
         onClose={() => setWsOpen(false)} />}
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => auth.refresh()} />}
+      {meMember && <CursorBadge member={meMember} />}
     </div>
   );
 }
@@ -912,7 +929,12 @@ function DetailModal({ page, personas, me, canEdit, addComment, setPageNote, pat
                                     onChange={intents => patchBlock(page.id, b.id, { intents })} />}
                   <select className="ml-auto border border-[var(--border)] rounded-full px-2 py-0.5 bg-transparent text-[11px]"
                           value={b.glyph} onChange={e => patchBlock(page.id, b.id, { glyph: e.target.value as GlyphId })}>
-                    {(Object.keys(GLYPHS) as GlyphId[]).map(g => <option key={g} value={g}>{GLYPHS[g].name}</option>)}
+                    {GLYPH_GROUPS.map(grp => (
+                      <optgroup key={grp} label={grp}>
+                        {(Object.keys(GLYPHS) as GlyphId[]).filter(g => GLYPHS[g].group === grp)
+                          .map(g => <option key={g} value={g}>{GLYPHS[g].name}</option>)}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>}
                 <div className="mt-3 pt-2.5 border-t border-[var(--border)]">
@@ -1016,6 +1038,86 @@ function HistoryPanel({ projectId, me, close, restore }: {
         ))}
       </div>
     </aside>
+  );
+}
+
+/* ---------- who am I: shared roster, per-browser selection ---------- */
+function MemberPicker({ members, meId, setMeId, addMember }: {
+  members: Member[]; meId: string | null;
+  setMeId: (id: string) => void;
+  addMember: (name: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState("");
+  const me = members.find(m => m.id === meId) ?? null;
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [open]);
+  const submit = () => { const n = draft.trim(); if (!n) return; addMember(n); setDraft(""); setOpen(false); };
+  return (
+    <div className="relative" ref={wrap}>
+      <button className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full hover:bg-[var(--hover)]"
+              title={me ? `You are ${me.name}. Click to switch.` : "Choose who you are"}
+              onClick={() => setOpen(o => !o)}>
+        <span className="w-7 h-7 flex items-center justify-center rounded-full text-white text-[10px] font-bold shrink-0"
+              style={{ background: me?.color ?? "var(--muted)" }}>
+          {me ? initialsOf(me.name) : "?"}
+        </span>
+        <span className="text-[12px] max-w-[92px] truncate hidden sm:block">{me?.name ?? "Who are you?"}</span>
+      </button>
+      {open && (
+        <div className="panel absolute right-0 top-[42px] w-[228px] rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-2xl p-1.5 z-40">
+          <p className="tk text-[9.5px] uppercase tracking-widest text-[var(--muted)] px-2 pt-1 pb-1.5">Working on this</p>
+          <div className="max-h-[210px] overflow-y-auto">
+            {members.map(m => (
+              <button key={m.id} onClick={() => { setMeId(m.id); setOpen(false); }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-xl text-left hover:bg-[var(--hover)] ${m.id === meId ? "bg-[var(--hover)]" : ""}`}>
+                <span className="w-6 h-6 flex items-center justify-center rounded-full text-white text-[9px] font-bold shrink-0"
+                      style={{ background: m.color }}>{initialsOf(m.name)}</span>
+                <span className="text-[12.5px] truncate flex-1">{m.name}</span>
+                {m.id === meId && <span className="text-[var(--accent)] shrink-0">{ICONS.check}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 mt-1 pt-1.5 border-t border-[var(--border)]">
+            <input className="flex-1 min-w-0 bg-transparent outline-none text-[12.5px] px-2 py-1 placeholder-[var(--muted)]"
+                   placeholder="Add a person…" value={draft}
+                   onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} />
+            <button className="px-2.5 py-1 rounded-full text-[11.5px] text-[var(--accent)] hover:bg-[var(--hover)] disabled:opacity-40 shrink-0"
+                    disabled={!draft.trim()} onClick={submit}>Add</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- cursor badge: your initials trail the pointer on the canvas ---------- */
+function CursorBadge({ member }: { member: Member }) {
+  const [p, setP] = useState<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      // Guard on Element, not just null: pointer events can target non-elements.
+      const t = e.target instanceof Element ? e.target : null;
+      // Hide over chrome and dialogs; this is a canvas affordance.
+      if (t && t.closest(".panel,.cluster,.toolbar,input,textarea,select,button")) { setP(null); return; }
+      setP({ x: e.clientX, y: e.clientY });
+    };
+    const leave = () => setP(null);
+    window.addEventListener("pointermove", move);
+    document.addEventListener("pointerleave", leave);
+    return () => { window.removeEventListener("pointermove", move); document.removeEventListener("pointerleave", leave); };
+  }, []);
+  if (!p) return null;
+  return (
+    <span className="fixed z-[60] pointer-events-none select-none rounded-full px-1.5 py-[3px] text-[9.5px] font-bold text-white shadow-md"
+          style={{ left: p.x + 14, top: p.y + 16, background: member.color }}>
+      {initialsOf(member.name)}
+    </span>
   );
 }
 

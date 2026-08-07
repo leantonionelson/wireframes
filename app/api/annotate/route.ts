@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { normDoc, type Comment, type PinNote } from "@/lib/model";
+import { normDoc, type Comment, type Member, type PinNote } from "@/lib/model";
 import { readProject, saveProject } from "@/lib/store";
 import { isAuthed } from "@/lib/auth";
 
@@ -15,7 +15,8 @@ type Op =
   | { op: "note-add"; note: PinNote }
   | { op: "note-patch"; id: string; text: string; author: string }
   | { op: "note-delete"; id: string; author: string }
-  | { op: "comment-add"; pageId: string; blockId: string; comment: Comment };
+  | { op: "comment-add"; pageId: string; blockId: string; comment: Comment }
+  | { op: "member-add"; member: Member };
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,6 +48,15 @@ export async function POST(req: NextRequest) {
         if (!block) return NextResponse.json({ error: "block not found" }, { status: 404, headers: noStore });
         block.comments.push(body.comment);
         by = body.comment.author || "anon";
+      } else if (body.op === "member-add") {
+        // Adding yourself to the roster is open, so a viewer can sign their
+        // notes. Names are deduplicated case-insensitively.
+        const name = (body.member.name || "").trim();
+        if (!name) return NextResponse.json({ error: "name required" }, { status: 400, headers: noStore });
+        const existing = doc.members.find(m => m.name.toLowerCase() === name.toLowerCase());
+        if (existing) return NextResponse.json({ doc, member: existing }, { headers: noStore });
+        doc.members.push({ ...body.member, name });
+        by = name;
       } else {
         return NextResponse.json({ error: "unknown op" }, { status: 400, headers: noStore });
       }

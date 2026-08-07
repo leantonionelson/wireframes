@@ -185,5 +185,6 @@ export function seedDoc(): Doc {
     personas,
     journeys,
     notes: [],
+    members: [],
   };
 }
