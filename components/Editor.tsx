@@ -212,7 +212,8 @@ export default function Editor({ projectId }: { projectId: string }) {
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest(".card,.panel,.toolbar,.cluster,button,input,textarea,select")) return;
     drag.current = { sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y, moved: false };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    // Can throw if the pointer is already gone; panning still works without it.
+    try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch { /* no capture, fine */ }
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const d = drag.current;
@@ -221,7 +222,10 @@ export default function Editor({ projectId }: { projectId: string }) {
     const x = d.ox + e.clientX - d.sx, y = d.oy + e.clientY - d.sy;
     setView(v => ({ ...v, x, y }));
   };
+  // Remembered past pointerup so the click that ends a pan does not drop a pin.
+  const draggedRef = useRef(false);
   const onPointerUp = () => {
+    draggedRef.current = !!drag.current?.moved;
     if (drag.current && !drag.current.moved) { setSel(null); if (panel === "inspector") setPanel(null); }
     drag.current = null;
   };
@@ -406,6 +410,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   // In notes mode a transparent catcher sits over the canvas; find what the
   // click landed on underneath it and anchor to the block first, page second.
   const placePin = (e: React.MouseEvent) => {
+    if (draggedRef.current) return; // that click was the end of a pan
     const els = document.elementsFromPoint(e.clientX, e.clientY);
     const anchor = (els.find(el => el.id?.startsWith("blk-")) ?? els.find(el => el.id?.startsWith("page-"))) as HTMLElement | undefined;
     if (!anchor) { setOpenNote(null); return; } // empty canvas: close any open note, stay in notes mode
@@ -457,10 +462,20 @@ export default function Editor({ projectId }: { projectId: string }) {
   const activeJourney = doc.journeys.find(j => j.id === active) ?? null;
 
   return (
-    <div className="h-screen relative bg-[var(--bg)] text-[var(--ink)] overflow-hidden">
+    <div className="h-screen relative bg-[var(--bg)] text-[var(--ink)] overflow-hidden"
+         // In notes mode, take the click in the capture phase rather than
+         // covering the canvas with an overlay. An overlay would swallow wheel
+         // and drag events, so pan and zoom would die while placing notes.
+         onClickCapture={e => {
+           if (!notesMode) return;
+           const t = e.target as HTMLElement;
+           if (t.closest(".panel,.cluster,.toolbar,button,input,textarea,select")) return; // chrome still works
+           e.stopPropagation();
+           placePin(e);
+         }}>
       <div className="absolute inset-0 overflow-hidden" ref={canvasRef}
            onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
-           style={{ cursor: drag.current ? "grabbing" : "grab",
+           style={{ cursor: notesMode ? "crosshair" : drag.current ? "grabbing" : "grab",
                     backgroundImage: "linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px)",
                     backgroundSize: `${24 * view.k}px ${24 * view.k}px`,
                     backgroundPosition: `${view.x}px ${view.y}px` }}>
@@ -478,7 +493,6 @@ export default function Editor({ projectId }: { projectId: string }) {
         <NotesLayer notes={doc.notes} openId={openNote} setOpenId={setOpenNote} canEdit={canEdit} me={me}
                     patchNote={patchNote} deleteNote={deleteNote} deps={[view, doc, openNote]} />
       )}
-      {notesMode && <div className="fixed inset-0 z-[19] cursor-crosshair" onClick={placePin} />}
       {notesMode && (
         <div className="cluster absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 pl-4 pr-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-amber-500/60 rounded-full shadow-lg">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
