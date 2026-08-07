@@ -471,8 +471,10 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {activeJourney && <JourneyOverlay journey={activeJourney} personas={doc.personas} deps={[view, doc, active]} />}
 
-      {/* pinned notes: markers and placement live in notes mode, open to everyone */}
-      {notesMode && (
+      {/* Pinned notes are content, so they are always on screen for everyone.
+          Notes mode only adds the crosshair for placing new ones. They render
+          as fixed overlays outside .tree, so PNG export stays clean. */}
+      {doc.notes.length > 0 && (
         <NotesLayer notes={doc.notes} openId={openNote} setOpenId={setOpenNote} canEdit={canEdit} me={me}
                     patchNote={patchNote} deleteNote={deleteNote} deps={[view, doc, openNote]} />
       )}
