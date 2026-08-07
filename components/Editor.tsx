@@ -589,8 +589,8 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
 
-      {detailPage && <DetailModal page={detailPage} personas={doc.personas} me={me} addComment={addComment} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
-      {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab}
+      {detailPage && <DetailModal page={detailPage} personas={doc.personas} me={me} canEdit={canEdit} addComment={addComment} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
+      {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab} canEdit={canEdit}
         patchPersona={patchPersona} addPersona={addPersona} deletePersona={deletePersona}
         patchJourney={patchJourney} patchStep={patchStep} addStep={appendStep} removeStep={removeStep}
         addJourney={addJourney} deleteJourney={deleteJourney}
@@ -759,9 +759,11 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild, personas, can
          className={`card w-[230px] rounded-xl bg-[var(--card)] border-2 ${page.external ? "border-dashed border-[var(--muted)]" : active ? "border-[var(--accent)]" : "border-[var(--card-border)]"} shadow-sm`}
          onClick={e => { e.stopPropagation(); if (!(e.target as HTMLElement).closest(".blk,button,input")) setSel({ pageId: page.id }); }}>
       <div className="flex items-center gap-1 px-2 pt-1.5">
-        <input className="w-full text-center font-bold text-[12.5px] text-[var(--accent)] outline-none bg-transparent"
-               value={page.name} onChange={e => rename(page.id, e.target.value)}
-               onFocus={() => setSel({ pageId: page.id })} onClick={e => e.stopPropagation()} />
+        {canEdit
+          ? <input className="w-full text-center font-bold text-[12.5px] text-[var(--accent)] outline-none bg-transparent"
+                   value={page.name} onChange={e => rename(page.id, e.target.value)}
+                   onFocus={() => setSel({ pageId: page.id })} onClick={e => e.stopPropagation()} />
+          : <div className="w-full text-center font-bold text-[12.5px] text-[var(--accent)] truncate">{page.name}</div>}
       </div>
       <div className="p-1.5 pt-1 flex flex-col gap-1">
         {page.blocks.map(b => {
@@ -799,10 +801,11 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild, personas, can
 }
 
 /* ---------- read & copy detail modal ---------- */
-function DetailModal({ page, personas, me, addComment, setPageNote, patchBlock, addBlk, onClose }: {
+function DetailModal({ page, personas, me, canEdit, addComment, setPageNote, patchBlock, addBlk, onClose }: {
   page: Page;
   personas: Persona[];
   me: string;
+  canEdit: boolean;
   addComment: (pid: string, bid: string, text: string) => void;
   setPageNote: (pid: string, n: string) => void;
   patchBlock: (pid: string, bid: string, patch: Partial<Block>) => void;
@@ -838,9 +841,11 @@ function DetailModal({ page, personas, me, addComment, setPageNote, patchBlock, 
                 <h3 className="font-bold text-[15px] text-[var(--ink)]">About this page</h3>
                 <CopyBtn text={page.note} />
               </div>
-              <textarea className="autogrow w-full bg-transparent outline-none text-[13.5px] leading-relaxed text-[var(--ink)] min-h-[48px]"
-                        placeholder="Purpose of the page, user needs, evidence…"
-                        value={page.note} onChange={e => setPageNote(page.id, e.target.value)} />
+              {canEdit
+                ? <textarea className="autogrow w-full bg-transparent outline-none text-[13.5px] leading-relaxed text-[var(--ink)] min-h-[48px]"
+                            placeholder="Purpose of the page, user needs, evidence…"
+                            value={page.note} onChange={e => setPageNote(page.id, e.target.value)} />
+                : <p className="text-[13.5px] leading-relaxed text-[var(--ink)] whitespace-pre-wrap">{page.note}</p>}
             </div>
             {page.blocks.map(b => (
               <div key={b.id} ref={el => { cardRefs.current[b.id] = el; }}
@@ -848,20 +853,32 @@ function DetailModal({ page, personas, me, addComment, setPageNote, patchBlock, 
                      focusedBlock === b.id ? "border-[var(--accent)]" : "border-[var(--border)]"}`}
                    style={focusedBlock === b.id ? { boxShadow: "0 0 0 3px var(--accent-soft)" } : undefined}>
                 <div className="flex items-start justify-between gap-3 mb-2">
-                  <input className="font-bold text-[15px] bg-transparent outline-none flex-1 min-w-0" style={{ color: COLOR_STYLES[b.color].bg }}
-                         value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
+                  {canEdit
+                    ? <input className="font-bold text-[15px] bg-transparent outline-none flex-1 min-w-0" style={{ color: COLOR_STYLES[b.color].bg }}
+                             value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
+                    : <h4 className="font-bold text-[15px] flex-1 min-w-0" style={{ color: COLOR_STYLES[b.color].bg }}>{b.label}</h4>}
                   <CopyBtn text={[b.label, b.note, b.component && `Component: ${b.component}`, b.flag && `FLAG: ${b.flag}`].filter(Boolean).join("\n")} />
                 </div>
-                <textarea className="autogrow w-full bg-transparent outline-none text-[13.5px] leading-relaxed text-[var(--ink)] mb-1 min-h-[24px]"
-                          placeholder="Purpose, user needs, content status…"
-                          value={b.note} onChange={e => patchBlock(page.id, b.id, { note: e.target.value })} />
-                <input className="w-full text-[13.5px] text-[var(--ink)] bg-transparent outline-none"
-                       placeholder="Component, e.g. AEM: Promotional Banner"
-                       value={b.component} onChange={e => patchBlock(page.id, b.id, { component: e.target.value })} />
-                <textarea className="autogrow w-full text-[13px] leading-relaxed text-red-500 font-medium mt-1.5 bg-transparent outline-none placeholder:text-red-300 min-h-[20px]"
-                          placeholder="Red flag: custom component or pending decision…"
-                          value={b.flag} onChange={e => patchBlock(page.id, b.id, { flag: e.target.value })} />
-                <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-[var(--border)]">
+                {canEdit ? (
+                  <>
+                    <textarea className="autogrow w-full bg-transparent outline-none text-[13.5px] leading-relaxed text-[var(--ink)] mb-1 min-h-[24px]"
+                              placeholder="Purpose, user needs, content status…"
+                              value={b.note} onChange={e => patchBlock(page.id, b.id, { note: e.target.value })} />
+                    <input className="w-full text-[13.5px] text-[var(--ink)] bg-transparent outline-none"
+                           placeholder="Component, e.g. AEM: Promotional Banner"
+                           value={b.component} onChange={e => patchBlock(page.id, b.id, { component: e.target.value })} />
+                    <textarea className="autogrow w-full text-[13px] leading-relaxed text-red-500 font-medium mt-1.5 bg-transparent outline-none placeholder:text-red-300 min-h-[20px]"
+                              placeholder="Red flag: custom component or pending decision…"
+                              value={b.flag} onChange={e => patchBlock(page.id, b.id, { flag: e.target.value })} />
+                  </>
+                ) : (
+                  <>
+                    {b.note && <p className="text-[13.5px] leading-relaxed text-[var(--ink)] mb-1 whitespace-pre-wrap">{b.note}</p>}
+                    {b.component && <p className="text-[13.5px] text-[var(--ink)]">{b.component}</p>}
+                    {b.flag && <p className="text-[13px] leading-relaxed text-red-500 font-medium mt-1.5 whitespace-pre-wrap">{b.flag}</p>}
+                  </>
+                )}
+                {canEdit && <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-[var(--border)]">
                   {CHROME_ROLES.includes(b.color)
                     ? (Object.keys(COLOR_STYLES) as ColorRole[]).map(c => (
                         <button key={c} title={COLOR_STYLES[c].label}
@@ -874,7 +891,7 @@ function DetailModal({ page, personas, me, addComment, setPageNote, patchBlock, 
                           value={b.glyph} onChange={e => patchBlock(page.id, b.id, { glyph: e.target.value as GlyphId })}>
                     {(Object.keys(GLYPHS) as GlyphId[]).map(g => <option key={g} value={g}>{GLYPHS[g].name}</option>)}
                   </select>
-                </div>
+                </div>}
                 <div className="mt-3 pt-2.5 border-t border-[var(--border)]">
                   {b.comments.length > 0 && (
                     <div className="space-y-1.5 mb-2">
@@ -905,8 +922,10 @@ function DetailModal({ page, personas, me, addComment, setPageNote, patchBlock, 
                              : "hover:ring-2 hover:ring-white/40"}`}
                          style={{ background: c.bg, color: c.fg }}>
                       <div className="flex items-center gap-1">
-                        <input className="w-full text-[10px] font-semibold bg-transparent outline-none cursor-pointer focus:cursor-text" style={{ color: c.fg }}
-                               value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
+                        {canEdit
+                          ? <input className="w-full text-[10px] font-semibold bg-transparent outline-none cursor-pointer focus:cursor-text" style={{ color: c.fg }}
+                                   value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
+                          : <span className="w-full text-[10px] font-semibold truncate" style={{ color: c.fg }}>{b.label}</span>}
                         {c.extra.map((col, i) => (
                           <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
                         ))}
@@ -915,8 +934,10 @@ function DetailModal({ page, personas, me, addComment, setPageNote, patchBlock, 
                     </div>
                   );
                 })}
-                <button className="text-[10px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
-                        onClick={addBlk}>+ block</button>
+                {canEdit && (
+                  <button className="text-[10px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
+                          onClick={addBlk}>+ block</button>
+                )}
               </div>
             </div>
           </div>
@@ -1050,8 +1071,9 @@ const Arrow = ({ color }: { color: string }) => (
 );
 
 /* ---------- user journeys modal: intents as tabs ---------- */
-function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deletePersona, patchJourney, patchStep, addStep, removeStep, addJourney, deleteJourney, active, setActive, record, onClose }: {
+function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, addPersona, deletePersona, patchJourney, patchStep, addStep, removeStep, addJourney, deleteJourney, active, setActive, record, onClose }: {
   doc: Doc; tab: string | null; setTab: (id: string | null) => void;
+  canEdit: boolean;
   patchPersona: (id: string, patch: Partial<Pick<Persona, "name" | "color" | "desc">>) => void;
   addPersona: (name: string, color: string, desc: string) => void;
   deletePersona: (id: string) => void;
@@ -1089,39 +1111,53 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
               <span className="w-2.5 h-2.5 rounded-full" style={{ background: p.color }} />{p.name}
             </button>
           ))}
-          <button className="px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--accent)]" title="Add intent"
-                  onClick={() => { addPersona("New intent", PERSONA_COLORS[doc.personas.length % PERSONA_COLORS.length], ""); }}>{ICONS.plus}</button>
+          {canEdit && (
+            <button className="px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--accent)]" title="Add intent"
+                    onClick={() => { addPersona("New intent", PERSONA_COLORS[doc.personas.length % PERSONA_COLORS.length], ""); }}>{ICONS.plus}</button>
+          )}
         </div>
-        {!intent && <div className="p-10 text-sm text-[var(--muted)]">No intents yet. Add one with the + tab.</div>}
+        {!intent && <div className="p-10 text-sm text-[var(--muted)]">{canEdit ? "No intents yet. Add one with the + tab." : "No intents defined."}</div>}
         {intent && (
           <div className="flex-1 overflow-y-auto">
             {/* intent header row */}
             <div className="px-6 py-2.5 border-b border-[var(--border)] flex items-center gap-2">
               <span className="w-3 h-3 rounded-full shrink-0" style={{ background: intent.color }} />
-              <input className="font-semibold bg-transparent outline-none text-[14px] min-w-0 flex-1" value={intent.name}
-                     onChange={e => patchPersona(intent.id, { name: e.target.value })} />
-              <div className="flex gap-1">
-                {PERSONA_COLORS.map(c => (
-                  <button key={c} className={`w-[14px] h-[14px] rounded-full ${intent.color === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
-                          style={{ background: c }} onClick={() => patchPersona(intent.id, { color: c })} />
-                ))}
+              {canEdit
+                ? <input className="font-semibold bg-transparent outline-none text-[14px] min-w-0 flex-1" value={intent.name}
+                         onChange={e => patchPersona(intent.id, { name: e.target.value })} />
+                : <span className="font-semibold text-[14px] min-w-0 flex-1 truncate">{intent.name}</span>}
+              {canEdit && (
+                <>
+                  <div className="flex gap-1">
+                    {PERSONA_COLORS.map(c => (
+                      <button key={c} className={`w-[14px] h-[14px] rounded-full ${intent.color === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
+                              style={{ background: c }} onClick={() => patchPersona(intent.id, { color: c })} />
+                    ))}
+                  </div>
+                  <button className="text-[var(--muted)] hover:text-red-500" title="Delete intent and its journeys"
+                          onClick={() => { if (confirm(`Delete intent "${intent.name}" and its journeys?`)) { deletePersona(intent.id); setTab(doc.personas.find(p => p.id !== intent.id)?.id ?? null); } }}>{ICONS.trash}</button>
+                </>
+              )}
+            </div>
+            {(canEdit || intent.desc) && (
+              <div className="px-6 pb-2 border-b border-[var(--border)]">
+                {canEdit
+                  ? <input className="w-full bg-transparent outline-none text-[12px] text-[var(--muted)]" placeholder="Describe this intent: who arrives with it, and the evidence…"
+                           value={intent.desc} onChange={e => patchPersona(intent.id, { desc: e.target.value })} />
+                  : <p className="text-[12px] text-[var(--muted)]">{intent.desc}</p>}
               </div>
-              <button className="text-[var(--muted)] hover:text-red-500" title="Delete intent and its journeys"
-                      onClick={() => { if (confirm(`Delete intent "${intent.name}" and its journeys?`)) { deletePersona(intent.id); setTab(doc.personas.find(p => p.id !== intent.id)?.id ?? null); } }}>{ICONS.trash}</button>
-            </div>
-            <div className="px-6 pb-2 border-b border-[var(--border)]">
-              <input className="w-full bg-transparent outline-none text-[12px] text-[var(--muted)]" placeholder="Describe this intent: who arrives with it, and the evidence…"
-                     value={intent.desc} onChange={e => patchPersona(intent.id, { desc: e.target.value })} />
-            </div>
+            )}
             {journeys.map(j => (
               <JourneyBoard key={j.id} j={j} color={intent.color} intentName={intent.name} pages={doc.pages} personas={doc.personas}
-                z={zOf(j.id)} setZ={setZFor(j.id)}
+                canEdit={canEdit} z={zOf(j.id)} setZ={setZFor(j.id)}
                 patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
                 deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
             ))}
             <div className="sticky bottom-0 px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
-              <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
-                      onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
+              {canEdit && (
+                <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+                        onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
+              )}
               <div className="ml-auto flex items-center gap-3">
                 {journeys.map(jj => {
                   const zv = zOf(jj.id);
@@ -1147,8 +1183,8 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   );
 }
 
-function JourneyBoard({ j, color, intentName, pages, personas, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record, z, setZ }: {
-  j: Journey; color: string; intentName: string; pages: Page[]; personas: Persona[];
+function JourneyBoard({ j, color, intentName, pages, personas, canEdit, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record, z, setZ }: {
+  j: Journey; color: string; intentName: string; pages: Page[]; personas: Persona[]; canEdit: boolean;
   patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
   patchStep: (jid: string, idx: number, note: string) => void;
   addStep: (jid: string, pageId: string) => void;
@@ -1189,22 +1225,32 @@ function JourneyBoard({ j, color, intentName, pages, personas, patchJourney, pat
   return (
     <div className="border-b border-[var(--border)] bg-[var(--card)]">
       <div className="px-6 py-2.5 flex items-center gap-2">
-        <input className="font-semibold bg-transparent outline-none text-[13.5px] min-w-0 flex-1" value={j.name}
-               onChange={e => patchJourney(j.id, { name: e.target.value })} />
+        {canEdit
+          ? <input className="font-semibold bg-transparent outline-none text-[13.5px] min-w-0 flex-1" value={j.name}
+                   onChange={e => patchJourney(j.id, { name: e.target.value })} />
+          : <span className="font-semibold text-[13.5px] min-w-0 flex-1 truncate">{j.name}</span>}
         <CopyBtn text={journeyToText(j, intentName, pageName)} />
         <button className={`text-[11px] px-2.5 py-1 rounded-full border ${active === j.id ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)]"}`}
                 title="Trace on canvas" onClick={() => setActive(active === j.id ? null : j.id)}>Trace</button>
-        <button className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)]"
-                title="Close and record by clicking pages" onClick={() => record(j.id)}>Record</button>
-        <button className="text-[var(--muted)] hover:text-red-500"
-                onClick={() => { if (confirm(`Delete journey "${j.name}"?`)) deleteJourney(j.id); }}>{ICONS.trash}</button>
+        {canEdit && (
+          <>
+            <button className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)]"
+                    title="Close and record by clicking pages" onClick={() => record(j.id)}>Record</button>
+            <button className="text-[var(--muted)] hover:text-red-500"
+                    onClick={() => { if (confirm(`Delete journey "${j.name}"?`)) deleteJourney(j.id); }}>{ICONS.trash}</button>
+          </>
+        )}
       </div>
-      <div className="px-6 pb-2 flex items-center gap-3">
-        <span className="tk text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">Goal</span>
-        <input className="flex-1 bg-transparent outline-none text-[13px] border-b border-transparent focus:border-[var(--border)]"
-               placeholder="What is this intent trying to achieve?"
-               value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
-      </div>
+      {(canEdit || j.goal) && (
+        <div className="px-6 pb-2 flex items-center gap-3">
+          <span className="tk text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">Goal</span>
+          {canEdit
+            ? <input className="flex-1 bg-transparent outline-none text-[13px] border-b border-transparent focus:border-[var(--border)]"
+                     placeholder="What is this intent trying to achieve?"
+                     value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
+            : <span className="flex-1 text-[13px]">{j.goal}</span>}
+        </div>
+      )}
       <div className="relative">
         <div ref={wrapRef} className="overflow-hidden select-none" style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
              onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
@@ -1212,9 +1258,11 @@ function JourneyBoard({ j, color, intentName, pages, personas, patchJourney, pat
                style={{ transform: `translateX(${z.x}px) scale(${z.k})`, transformOrigin: "0 0" }}>
             <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
               <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Entry</div>
-              <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
-                        placeholder="Where does this journey begin?"
-                        value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
+              {canEdit
+                ? <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
+                            placeholder="Where does this journey begin?"
+                            value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
+                : <p className="text-[12.5px] leading-snug min-h-[84px] whitespace-pre-wrap">{j.entry}</p>}
             </div>
             <Arrow color={color} />
             {j.steps.map((st, i) => {
@@ -1225,32 +1273,40 @@ function JourneyBoard({ j, color, intentName, pages, personas, patchJourney, pat
                     <div className="flex items-center gap-1.5 mb-1.5">
                       <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: color }}>{i + 1}</span>
                       <span className="text-[12px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
-                      <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>
+                      {canEdit && <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>}
                     </div>
                     {p ? <MiniStack page={p} personas={personas} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
-                    <textarea className="autogrow mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 min-h-[54px]"
-                              placeholder="What do they do here? Evidence?"
-                              value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
+                    {canEdit
+                      ? <textarea className="autogrow mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 min-h-[54px]"
+                                  placeholder="What do they do here? Evidence?"
+                                  value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
+                      : st.note && <p className="mt-1.5 w-full text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 whitespace-pre-wrap">{st.note}</p>}
                   </div>
                   <Arrow color={color} />
                 </React.Fragment>
               );
             })}
-            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch">
-              <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
-              <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
-                      value="" onChange={e => { if (e.target.value) addStep(j.id, e.target.value); }}>
-                <option value="">choose page…</option>
-                {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>
-            </div>
-            <Arrow color={color} />
+            {canEdit && (
+              <>
+                <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch">
+                  <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
+                  <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
+                          value="" onChange={e => { if (e.target.value) addStep(j.id, e.target.value); }}>
+                    <option value="">choose page…</option>
+                    {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>
+                </div>
+                <Arrow color={color} />
+              </>
+            )}
             <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
               <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
-              <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
-                        placeholder="Where does it end?"
-                        value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
+              {canEdit
+                ? <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
+                            placeholder="Where does it end?"
+                            value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
+                : <p className="text-[12.5px] leading-snug min-h-[84px] whitespace-pre-wrap">{j.exit}</p>}
             </div>
           </div>
         </div>
