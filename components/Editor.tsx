@@ -235,7 +235,9 @@ export default function Editor({ projectId }: { projectId: string }) {
     };
     el.addEventListener("wheel", onWheelNative, { passive: false });
     return () => el.removeEventListener("wheel", onWheelNative);
-  }, [doc ? 1 : 0]); // eslint-disable-line react-hooks/exhaustive-deps
+    // cycleDone matters: the canvas is not mounted until the loader clears, so
+    // without it the listener is attached to nothing and scrolling stays dead.
+  }, [doc ? 1 : 0, cycleDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const childrenOf = useMemo(() => {
     const m = new Map<string | null, Page[]>();
