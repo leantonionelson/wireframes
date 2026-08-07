@@ -31,7 +31,10 @@ function resolveDbUrl(): Promise<string> {
 }
 
 export function newProjectDoc(name: string): Doc {
-  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" + Math.random().toString(36).slice(2, 6);
+  // Readable slug plus enough randomness that a share URL cannot be guessed
+  // or enumerated from the project name alone.
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" +
+    Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
   return {
     id, name, rev: 1, updatedAt: Date.now(), updatedBy: "created",
     pages: [{ id: "root", name: "Home", parentId: null, order: 0, note: "", blocks: [

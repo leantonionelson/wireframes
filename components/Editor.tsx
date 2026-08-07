@@ -72,8 +72,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("loading");
   const [me, setMe] = useState("");
-  const [pinMode, setPinMode] = useState(false);
-  const [notesVisible, setNotesVisible] = useState(true);
+  const [notesMode, setNotesMode] = useState(false);
   const [openNote, setOpenNote] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [shared, setShared] = useState(false);
@@ -85,6 +84,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   docRef.current = doc;
   const dirtyRef = useRef(false);
   dirtyRef.current = dirty;
+  const annPending = useRef(0); // in-flight or debounced annotation ops; poll waits for them
   const history = useRef<{ past: Snap[]; future: Snap[] }>({ past: [], future: [] });
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function Editor({ projectId }: { projectId: string }) {
     load();
     const t = setInterval(async () => {
       const d = docRef.current;
-      if (!d || dirtyRef.current) return;
+      if (!d || dirtyRef.current || annPending.current > 0) return;
       const r = await fetch(`/api/doc?id=${projectId}&since=${d.rev}`).then(r => r.json());
       if (!stop && !r.unchanged && r.doc) setDoc(normDoc(r.doc));
     }, 4000);
@@ -159,6 +159,22 @@ export default function Editor({ projectId }: { projectId: string }) {
     scheduleSave();
   }, [scheduleSave]);
 
+  /* annotation transport: pinned notes & comments are open to viewers, so
+     they go through /api/annotate (server-side merge) rather than the gated
+     doc PUT. Local echo first, server response adopted when we are not dirty.
+     These hooks must sit above the loading early-return with the others. */
+  const applyLocal = (fn: (d: Doc) => Doc) => setDoc(prev => (prev ? fn(structuredClone(prev)) : prev));
+  const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const sendAnnotate = useCallback(async (payload: Record<string, unknown>) => {
+    annPending.current++;
+    try {
+      const r = await fetch("/api/annotate", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ projectId, ...payload }) });
+      const j = await r.json();
+      if (r.ok && j.doc && !dirtyRef.current) setDoc(normDoc(j.doc));
+    } finally { annPending.current--; }
+  }, [projectId]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
@@ -167,7 +183,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
       }
-      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsOpen(false); setPinMode(false); setOpenNote(null); }
+      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsOpen(false); setNotesMode(false); setOpenNote(null); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -284,8 +300,11 @@ export default function Editor({ projectId }: { projectId: string }) {
     return d;
   });
   const deleteBlock = (pid: string, bid: string) => { mutate(d => { const p = d.pages.find(p => p.id === pid)!; p.blocks = p.blocks.filter(b => b.id !== bid); d.notes = d.notes.filter(n => n.blockId !== bid); return d; }); setSel({ pageId: pid }); };
-  const addComment = (pid: string, bid: string, text: string) =>
-    mutate(d => { const p = d.pages.find(p => p.id === pid)!; p.blocks.find(b => b.id === bid)!.comments.push({ id: uid(), author: me, text, at: Date.now() }); return d; });
+  const addComment = (pid: string, bid: string, text: string) => {
+    const comment = { id: uid(), author: me || "anon", text, at: Date.now() };
+    applyLocal(d => { d.pages.find(p => p.id === pid)?.blocks.find(b => b.id === bid)?.comments.push(comment); return d; });
+    sendAnnotate({ op: "comment-add", pageId: pid, blockId: bid, comment });
+  };
 
   /* journeys */
   const addPersona = (name: string, color: string, desc: string) =>
@@ -322,22 +341,34 @@ export default function Editor({ projectId }: { projectId: string }) {
   });
   const deleteJourney = (jid: string) => { mutate(d => { d.journeys = d.journeys.filter(j => j.id !== jid); return d; }); if (recording === jid) setRecording(null); if (active === jid) setActive(null); };
 
-  /* pinned notes */
   const addNote = (pageId: string, blockId: string | undefined, fx: number, fy: number) => {
-    const nid = uid();
-    mutate(d => { d.notes.push({ id: nid, pageId, blockId, fx, fy, text: "", author: me || "anon", at: Date.now() }); return d; });
-    setOpenNote(nid);
+    const note: PinNote = { id: uid(), pageId, blockId, fx, fy, text: "", author: me || "anon", at: Date.now() };
+    applyLocal(d => { d.notes.push(note); return d; });
+    setOpenNote(note.id);
+    sendAnnotate({ op: "note-add", note });
   };
-  const patchNote = (nid: string, text: string) =>
-    mutate(d => { const n = d.notes.find(n => n.id === nid); if (n) n.text = text; return d; });
-  const deleteNote = (nid: string) => { mutate(d => { d.notes = d.notes.filter(n => n.id !== nid); return d; }); setOpenNote(null); };
+  const patchNote = (nid: string, text: string) => {
+    applyLocal(d => { const n = d.notes.find(n => n.id === nid); if (n) n.text = text; return d; });
+    if (noteTimers.current[nid]) clearTimeout(noteTimers.current[nid]); else annPending.current++;
+    noteTimers.current[nid] = setTimeout(() => {
+      delete noteTimers.current[nid];
+      annPending.current--;
+      const n = docRef.current?.notes.find(n => n.id === nid);
+      if (n) sendAnnotate({ op: "note-patch", id: nid, text: n.text, author: me || "anon" });
+    }, 600);
+  };
+  const deleteNote = (nid: string) => {
+    applyLocal(d => { d.notes = d.notes.filter(n => n.id !== nid); return d; });
+    setOpenNote(null);
+    sendAnnotate({ op: "note-delete", id: nid, author: me || "anon" });
+  };
 
-  // In pin mode a transparent catcher sits over the canvas; find what the
+  // In notes mode a transparent catcher sits over the canvas; find what the
   // click landed on underneath it and anchor to the block first, page second.
   const placePin = (e: React.MouseEvent) => {
     const els = document.elementsFromPoint(e.clientX, e.clientY);
     const anchor = (els.find(el => el.id?.startsWith("blk-")) ?? els.find(el => el.id?.startsWith("page-"))) as HTMLElement | undefined;
-    if (!anchor) return; // empty canvas: stay in pin mode
+    if (!anchor) { setOpenNote(null); return; } // empty canvas: close any open note, stay in notes mode
     const r = anchor.getBoundingClientRect();
     const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
@@ -347,7 +378,6 @@ export default function Editor({ projectId }: { projectId: string }) {
       : anchor.id.slice(5);
     if (!pageId) return;
     addNote(pageId, isBlk ? anchor.id.slice(4) : undefined, fx, fy);
-    setPinMode(false);
   };
 
   const exportPng = async () => {
@@ -401,17 +431,17 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {activeJourney && <JourneyOverlay journey={activeJourney} personas={doc.personas} deps={[view, doc, active]} />}
 
-      {/* pinned notes */}
-      {notesVisible && doc.notes.length > 0 && (
-        <NotesLayer notes={doc.notes} openId={openNote} setOpenId={setOpenNote} canEdit={canEdit}
-                    patchNote={patchNote} deleteNote={deleteNote} deps={[view, doc, notesVisible, openNote]} />
+      {/* pinned notes: markers and placement live in notes mode, open to everyone */}
+      {notesMode && (
+        <NotesLayer notes={doc.notes} openId={openNote} setOpenId={setOpenNote} canEdit={canEdit} me={me}
+                    patchNote={patchNote} deleteNote={deleteNote} deps={[view, doc, openNote]} />
       )}
-      {pinMode && <div className="fixed inset-0 z-[19] cursor-crosshair" onClick={placePin} />}
-      {pinMode && (
+      {notesMode && <div className="fixed inset-0 z-[19] cursor-crosshair" onClick={placePin} />}
+      {notesMode && (
         <div className="cluster absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 pl-4 pr-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-amber-500/60 rounded-full shadow-lg">
           <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-[12.5px]">Click a page or block to pin a note</span>
-          <button className="px-3 py-1 rounded-full bg-[var(--accent)] text-white text-[12px]" onClick={() => setPinMode(false)}>Cancel</button>
+          <span className="text-[12.5px]">Notes: click a page or block to pin one, click a marker to read it</span>
+          <button className="px-3 py-1 rounded-full bg-[var(--accent)] text-white text-[12px]" onClick={() => setNotesMode(false)}>Done</button>
         </div>
       )}
 
@@ -433,12 +463,8 @@ export default function Editor({ projectId }: { projectId: string }) {
             View only · Log in
           </button>
         )}
-        {canEdit && (
-          <>
-            <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="You">{(me || "??").slice(0, 2).toUpperCase()}</span>
-            <input className="tk border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent text-[11px] hidden sm:block" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
-          </>
-        )}
+        <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="You">{(me || "??").slice(0, 2).toUpperCase()}</span>
+        <input className="tk border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent text-[11px] hidden sm:block" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
         {auth.enabled && auth.authed && (
           <button className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" title="Log out"
                   onClick={async () => { await logout(); auth.refresh(); }}>
@@ -467,21 +493,14 @@ export default function Editor({ projectId }: { projectId: string }) {
             <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={() => addChildPage(null)} title="Add top-level page">
               {ICONS.plus}<span className="hidden sm:inline">Page</span>
             </button>
-            <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${pinMode ? "bg-amber-400 text-amber-950" : "hover:bg-[var(--hover)]"}`}
-                    onClick={() => setPinMode(m => !m)} title="Pin a note to the wireframe">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5M9 4h6l1 7 2 2H6l2-2 1-7z"/></svg>
-              <span className="hidden sm:inline">Note</span>
-            </button>
           </>
         )}
-        {doc.notes.length > 0 && (
-          <button className={pillBtn} onClick={() => setNotesVisible(v => !v)}
-                  title={notesVisible ? "Hide pinned notes" : `Show pinned notes (${doc.notes.length})`}>
-            {notesVisible
-              ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
-              : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>}
-          </button>
-        )}
+        <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${notesMode ? "bg-amber-400 text-amber-950" : "hover:bg-[var(--hover)]"}`}
+                onClick={() => { setNotesMode(m => !m); setOpenNote(null); }}
+                title="Notes: see pinned notes and add your own">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5M9 4h6l1 7 2 2H6l2-2 1-7z"/></svg>
+          <span className="hidden sm:inline">Notes{doc.notes.length > 0 ? ` · ${doc.notes.length}` : ""}</span>
+        </button>
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={exportPng} title="Export PNG">
           {ICONS.export}<span className="hidden sm:inline">Export</span>
         </button>
@@ -570,7 +589,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
 
-      {detailPage && <DetailModal page={detailPage} personas={doc.personas} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
+      {detailPage && <DetailModal page={detailPage} personas={doc.personas} me={me} addComment={addComment} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
       {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab}
         patchPersona={patchPersona} addPersona={addPersona} deletePersona={deletePersona}
         patchJourney={patchJourney} patchStep={patchStep} addStep={appendStep} removeStep={removeStep}
@@ -583,12 +602,29 @@ export default function Editor({ projectId }: { projectId: string }) {
   );
 }
 
+/* ---------- comment input, one per block card in the detail modal ---------- */
+function CommentBox({ me, onAdd }: { me: string; onAdd: (text: string) => void }) {
+  const [t, setT] = useState("");
+  const post = () => { if (t.trim()) { onAdd(t.trim()); setT(""); } };
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="w-5 h-5 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[8px] font-bold shrink-0" title={me || "anon"}>{(me || "??").slice(0, 2).toUpperCase()}</span>
+      <input className="flex-1 min-w-0 border border-[var(--border)] rounded-full px-3 py-1 bg-transparent outline-none text-[12.5px] placeholder-[var(--muted)]"
+             placeholder="Add a comment…" value={t}
+             onChange={e => setT(e.target.value)} onKeyDown={e => e.key === "Enter" && post()} />
+      <button className="px-3 py-1 rounded-full text-[12px] text-[var(--accent)] hover:bg-[var(--hover)] disabled:opacity-40 shrink-0"
+              disabled={!t.trim()} onClick={post}>Post</button>
+    </div>
+  );
+}
+
 /* ---------- pinned notes overlay ---------- */
-function NotesLayer({ notes, openId, setOpenId, canEdit, patchNote, deleteNote, deps }: {
+function NotesLayer({ notes, openId, setOpenId, canEdit, me, patchNote, deleteNote, deps }: {
   notes: PinNote[];
   openId: string | null;
   setOpenId: (id: string | null) => void;
   canEdit: boolean;
+  me: string;
   patchNote: (id: string, text: string) => void;
   deleteNote: (id: string) => void;
   deps: unknown[];
@@ -608,6 +644,8 @@ function NotesLayer({ notes, openId, setOpenId, canEdit, patchNote, deleteNote, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   const open = openId ? notes.find(n => n.id === openId) : undefined;
+  // Editors can modify any note; everyone else only their own.
+  const canModify = !!open && (canEdit || open.author === (me || "anon"));
   const op = open ? pos[open.id] : undefined;
   const px = op ? Math.min(op.x + 14, (typeof window !== "undefined" ? window.innerWidth : 1200) - 296) : 0;
   const py = op ? Math.min(Math.max(op.y - 10, 64), (typeof window !== "undefined" ? window.innerHeight : 800) - 220) : 0;
@@ -632,14 +670,14 @@ function NotesLayer({ notes, openId, setOpenId, canEdit, patchNote, deleteNote, 
           <div className="flex items-center gap-2 mb-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
             <span className="tk text-[10.5px] text-[var(--muted)] truncate">{open.author} · {new Date(open.at).toLocaleString()}</span>
-            {canEdit && (
+            {canModify && (
               <button className="ml-auto text-[var(--muted)] hover:text-red-500 shrink-0" title="Delete note" onClick={() => deleteNote(open.id)}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
               </button>
             )}
-            <button className={`${canEdit ? "" : "ml-auto "}text-[var(--muted)] hover:text-[var(--ink)] shrink-0`} title="Close" onClick={() => setOpenId(null)}>{ICONS.close}</button>
+            <button className={`${canModify ? "" : "ml-auto "}text-[var(--muted)] hover:text-[var(--ink)] shrink-0`} title="Close" onClick={() => setOpenId(null)}>{ICONS.close}</button>
           </div>
-          {canEdit
+          {canModify
             ? <textarea autoFocus className="autogrow w-full bg-transparent outline-none text-[13px] leading-relaxed min-h-[56px]"
                         placeholder="What should the team know here?"
                         value={open.text} onChange={e => patchNote(open.id, e.target.value)} />
@@ -761,9 +799,11 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild, personas, can
 }
 
 /* ---------- read & copy detail modal ---------- */
-function DetailModal({ page, personas, setPageNote, patchBlock, addBlk, onClose }: {
+function DetailModal({ page, personas, me, addComment, setPageNote, patchBlock, addBlk, onClose }: {
   page: Page;
   personas: Persona[];
+  me: string;
+  addComment: (pid: string, bid: string, text: string) => void;
   setPageNote: (pid: string, n: string) => void;
   patchBlock: (pid: string, bid: string, patch: Partial<Block>) => void;
   addBlk: () => void;
@@ -835,15 +875,18 @@ function DetailModal({ page, personas, setPageNote, patchBlock, addBlk, onClose 
                     {(Object.keys(GLYPHS) as GlyphId[]).map(g => <option key={g} value={g}>{GLYPHS[g].name}</option>)}
                   </select>
                 </div>
-                {b.comments.length > 0 && (
-                  <div className="mt-3 space-y-1.5">
-                    {b.comments.map(c => (
-                      <div key={c.id} className="text-[12.5px] bg-[var(--hover)] rounded-lg px-3 py-1.5">
-                        <span className="tk text-[10px] text-[var(--muted)] mr-2">{c.author}</span>{c.text}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="mt-3 pt-2.5 border-t border-[var(--border)]">
+                  {b.comments.length > 0 && (
+                    <div className="space-y-1.5 mb-2">
+                      {b.comments.map(c => (
+                        <div key={c.id} className="text-[12.5px] bg-[var(--hover)] rounded-lg px-3 py-1.5">
+                          <span className="tk text-[10px] text-[var(--muted)] mr-2">{c.author} · {new Date(c.at).toLocaleDateString()}</span>{c.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <CommentBox me={me} onAdd={t => addComment(page.id, b.id, t)} />
+                </div>
               </div>
             ))}
           </div>
