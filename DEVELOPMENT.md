@@ -38,7 +38,9 @@ SCAFFOLD_PASSWORD=anything
 | `lib/glyphs.tsx` | 36 wireframe glyphs in 6 groups, two-tone (filled surfaces + stroke detail) |
 | `lib/seed.ts` | The EY Global Careers seed project |
 | `lib/auth.ts` | Single-password gate, HMAC cookie |
+| `lib/md.ts` | The Markdown round trip: `docToMarkdown`, `applyMarkdown`, `starterDoc` |
 | `components/Editor.tsx` | Everything canvas-side. Large; the sub-components are at the bottom |
+| `components/AiExchange.tsx` | The Markdown export/import modal, both modes, plus `CopyBtn` |
 | `components/Auth.tsx` | `useAuth` hook + login modal |
 
 ### The two write paths, and why there are two
@@ -48,7 +50,25 @@ SCAFFOLD_PASSWORD=anything
 
 This split is load-bearing. Do not move annotations onto the gated PUT, and do not open the PUT.
 
-**When adding AI editing, extend the annotate op vocabulary rather than letting a model PUT whole documents.** A model that returns a doc with a page missing will silently delete that page.
+**A model must never write to either path directly.** A model that returns a doc with a page missing will silently delete that page. Today it cannot: the Markdown round trip puts a human review step between the model and the document (see below). If in-app AI editing ever arrives, extend the annotate op vocabulary rather than letting a model PUT whole documents.
+
+## The Markdown round trip
+
+There is no model in the product. The document goes out as one Markdown file, the author gives it to whichever AI they already pay for, and the edited file comes back. `Export / import` in the editor, `build one from scratch with your AI` on the project list.
+
+**The file carries its own instructions.** `brief()` in `lib/md.ts` writes the editing rules, the field meanings and the full glyph vocabulary into the top of every export, so nothing has to be explained in the prompt. Two flavours: `edit` (an existing scaffold) and `create` (an empty starter from `starterDoc`, which is never persisted; the project is created only when the finished file comes back).
+
+**Identity is the whole trick.** Every page, block, intent and journey carries its id in its heading (`pg:` `bl:` `int:` `jr:`). That is what makes the import a merge rather than a replace: ids survive renames and moves, a heading with no id is new, and anything missing is a deletion. Comments, pinned notes and the roster are never in the file and are re-attached by id.
+
+Three rules keep a careless model from destroying work, and they are load-bearing:
+
+1. **An absent field keeps its current value.** Only a literal `(none)` clears one. A model that drops the `flag:` line does not wipe the flag.
+2. **Nothing is written until the author has read the change list.** `applyMarkdown` returns the would-be document *and* every change it makes; removals are counted and confirmed separately. The import then goes through `mutate()`, so it is one undo away.
+3. **Unknown values degrade, they do not throw.** An invented glyph or role keeps the old value and adds a warning.
+
+`docToMarkdown` → `applyMarkdown` on the EY document is exactly lossless: 10 pages, 82 blocks, 4 journeys back out with zero reported changes and a deep-equal document. If you change the format, that identity is the test to re-run.
+
+**Field values are one line.** A real line break travels as a literal `\n` and comes back as one, because multi-line flags are common. Backticks in a value would close it, so they become apostrophes.
 
 ## Auth model
 
@@ -83,9 +103,9 @@ Every mutation is enforced server-side. The UI gating is convenience, not securi
 
 1. **Tenancy + real accounts** — Firebase Auth is the obvious fit and solves it directly. Keep Postgres; Firebase Auth alongside it is a normal architecture. Gate `GET /api/projects` at the same time.
 2. **Images in notes, comments and block writeups** — Firebase **Storage** (not Firestore), URLs in the doc, never binary. Two traps: set bucket **CORS** or `html-to-image` PNG export silently drops the images, and Storage security rules are separate from database rules.
-3. **Coding-agent export** — the highest-value/lowest-effort item. The document is already close to a build brief: page tree = routes, blocks = component sequence, glyph = type, `component` = implementation target, `note` = spec, `intents` = who it serves, journeys = flows that must work. **The red flags are the most valuable field**, because they tell an agent what *not* to invent. Output a scaffold (routes, stubs, notes as TODOs), not a finished site.
+3. **Coding-agent export** — the highest-value/lowest-effort item, and `lib/md.ts` is now most of the machinery: the emitter already walks the tree and knows every field. A build brief is a third `Mode`, not a new module. The document is already close to a build brief: page tree = routes, blocks = component sequence, glyph = type, `component` = implementation target, `note` = spec, `intents` = who it serves, journeys = flows that must work. **The red flags are the most valuable field**, because they tell an agent what *not* to invent. Output a scaffold (routes, stubs, notes as TODOs), not a finished site.
 4. **Design tokens** — only as far as step 3 needs: brand colour, neutrals, semantic colours, type family + scale, spacing unit, radius. `globals.css` already has the shape to emit.
-5. **In-app AI editing** — via the annotate ops from step 3.
+5. **In-app AI editing** — via the annotate ops from step 3. Lower priority now that the Markdown round trip exists: it costs nothing to run, uses the AI the client already trusts, and the review step is a feature rather than a compromise. Build this only when someone asks to skip the copy and paste.
 6. **Live cursors** — needs an ephemeral channel, **never the document** (30–60 updates/sec would spam the rev counter and version history). Firebase **Realtime Database** is the right tool, not Firestore: cheap at high write rates and `onDisconnect()` handles ghost cursors. Ably/Pusher are the alternative. Netlify functions cannot hold websockets. Broadcast **canvas coordinates**, not screen pixels, so cursors land on the same block at different zoom levels. The local `CursorBadge` is most of the rendering already.
 
 ### Firestore note if the DB ever moves

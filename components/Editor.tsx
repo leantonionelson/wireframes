@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { COLOR_STYLES, CHROME_ROLES, PERSONA_COLORS, blockStyle, readableOn, initialsOf, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Member, type Page, type Persona, type PinNote, blankBlock, uid } from "@/lib/model";
 import { GLYPHS, GLYPH_GROUPS, Glyph } from "@/lib/glyphs";
+import { AiExchangeModal, CopyBtn } from "@/components/AiExchange";
 import { LogoMark, ScaffoldingLoader, SCAFFOLD_CYCLE_MS, ThemeToggle } from "@/components/Theme";
 import { LoginModal, logout, useAuth } from "@/components/Auth";
 
@@ -33,6 +34,9 @@ const ICONS = {
   eye: I(<><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></>),
   eyeOff: I(<><path d="M17.94 17.94A10.9 10.9 0 0 1 12 19c-6.4 0-10-7-10-7a20 20 0 0 1 5.06-5.94M9.9 4.24A10.4 10.4 0 0 1 12 4c6.4 0 10 7 10 7a19.8 19.8 0 0 1-3.22 4.31" /><line x1="2" y1="2" x2="22" y2="22" /></>),
   rec: I(<circle cx="12" cy="12" r="6" />),
+  image: I(<><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9.5" r="1.5" /><path d="M4 17l5-5 4 3.5 3-2.5 4 4" /></>),
+  md: I(<><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 17v-4l2 2 2-2v4" /></>),
+  upload: I(<><path d="M12 20V8" /><path d="M7 12l5-5 5 5" /><path d="M4 4h16" /></>),
 };
 
 function pageToText(p: Page): string {
@@ -47,17 +51,6 @@ function pageToText(p: Page): string {
     lines.push("");
   });
   return lines.join("\n");
-}
-
-function CopyBtn({ text, label }: { text: string; label?: string }) {
-  const [done, setDone] = useState(false);
-  return (
-    <button title="Copy"
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] text-[11px] shrink-0"
-      onClick={async e => { e.stopPropagation(); await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1200); }}>
-      {done ? ICONS.check : ICONS.copy}{label && <span>{done ? "Copied" : label}</span>}
-    </button>
-  );
 }
 
 export default function Editor({ projectId }: { projectId: string }) {
@@ -76,6 +69,8 @@ export default function Editor({ projectId }: { projectId: string }) {
   const [openNote, setOpenNote] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
   const [shared, setShared] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiTab, setAiTab] = useState<"export" | "import">("export");
   const auth = useAuth();
   const canEdit = auth.canEdit;
   const canEditRef = useRef(canEdit);
@@ -199,7 +194,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
       }
-      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsOpen(false); setNotesMode(false); setOpenNote(null); }
+      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsOpen(false); setNotesMode(false); setOpenNote(null); setAiOpen(false); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -435,6 +430,15 @@ export default function Editor({ projectId }: { projectId: string }) {
     a.href = url; a.download = `${docRef.current.name.replace(/[^\w-]+/g, "_")}.png`; a.click();
   };
 
+  // An edited Markdown brief coming back in. The change list has already been
+  // reviewed in the modal; this goes through mutate so it lands in undo history
+  // and saves on the normal revision-checked path.
+  const applyImport = (next: Doc) => mutate(d => {
+    d.name = next.name; d.pages = next.pages; d.personas = next.personas;
+    d.journeys = next.journeys; d.notes = next.notes;
+    return d;
+  });
+
   const restoreVersion = (v: Doc) => mutate(d => {
     d.name = v.name; d.pages = v.pages; d.personas = v.personas ?? []; d.journeys = v.journeys ?? [];
     return d;
@@ -541,14 +545,9 @@ export default function Editor({ projectId }: { projectId: string }) {
       {/* bottom-center: tools */}
       <div className="cluster absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
         {canEdit && (
-          <>
-            <button className={pillBtn} onClick={undo} title="Undo (Cmd/Ctrl+Z)">{ICONS.undo}</button>
-            <button className={pillBtn} onClick={redo} title="Redo (Cmd/Ctrl+Shift+Z)">{ICONS.redo}</button>
-            <span className="w-px h-5 bg-[var(--border)]" />
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={() => addChildPage(null)} title="Add top-level page">
-              {ICONS.plus}<span className="hidden sm:inline">Page</span>
-            </button>
-          </>
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={() => addChildPage(null)} title="Add top-level page">
+            {ICONS.plus}<span className="hidden sm:inline">Page</span>
+          </button>
         )}
         <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${notesMode ? "bg-amber-400 text-amber-950" : "hover:bg-[var(--hover)]"}`}
                 onClick={() => { setNotesMode(m => !m); setOpenNote(null); }}
@@ -556,9 +555,8 @@ export default function Editor({ projectId }: { projectId: string }) {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5M9 4h6l1 7 2 2H6l2-2 1-7z"/></svg>
           <span className="hidden sm:inline">Notes{doc.notes.length > 0 ? ` · ${doc.notes.length}` : ""}</span>
         </button>
-        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={exportPng} title="Export PNG">
-          {ICONS.export}<span className="hidden sm:inline">Export</span>
-        </button>
+        <ExportMenu canEdit={canEdit} exportPng={exportPng}
+                    openAi={tab => { setAiTab(tab); setAiOpen(true); }} />
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]"
                 title="Copy link — anyone with it can view, editing needs the password"
                 onClick={async () => { await navigator.clipboard.writeText(window.location.href); setShared(true); setTimeout(() => setShared(false), 1500); }}>
@@ -569,13 +567,20 @@ export default function Editor({ projectId }: { projectId: string }) {
                 onClick={() => { setWsOpen(true); setWsTab(t => t ?? (docRef.current?.personas[0]?.id ?? null)); }} title="User journeys">
           {ICONS.route}<span className="hidden sm:inline">User journeys</span>
         </button>
-        {canEdit && (
-          <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
+      </div>
+
+      {/* top-centre: the time controls, kept together and away from the
+          make-things toolbar at the bottom */}
+      {canEdit && (
+        <div className="cluster absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
+          <button className={pillBtn} onClick={undo} title="Undo (Cmd/Ctrl+Z)">{ICONS.undo}</button>
+          <button className={`flex items-center gap-2 px-3 py-1 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
                   onClick={() => setPanel(panel === "history" ? null : "history")} title="Version history">
             {ICONS.clock}<span className="hidden sm:inline">History</span>
           </button>
-        )}
-      </div>
+          <button className={pillBtn} onClick={redo} title="Redo (Cmd/Ctrl+Shift+Z)">{ICONS.redo}</button>
+        </div>
+      )}
 
       {/* bottom-right: intent legend, sits above the zoom cluster.
           Each intent opens User journeys on its own tab. */}
@@ -652,6 +657,9 @@ export default function Editor({ projectId }: { projectId: string }) {
         active={active} setActive={setActive}
         record={(jid) => { setRecording(jid); setWsOpen(false); }}
         onClose={() => setWsOpen(false)} />}
+      {aiOpen && <AiExchangeModal mode="edit" doc={doc} canEdit={canEdit} initialTab={aiTab}
+                                  apply={next => { applyImport(next); setAiOpen(false); }}
+                                  onClose={() => setAiOpen(false)} />}
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => auth.refresh()} />}
       {meMember && <CursorBadge member={meMember} />}
     </div>
@@ -1054,6 +1062,59 @@ function HistoryPanel({ projectId, me, close, restore }: {
         ))}
       </div>
     </aside>
+  );
+}
+
+/* ---------- export menu ---------- */
+function ExportMenu({ canEdit, exportPng, openAi }: {
+  canEdit: boolean;
+  exportPng: () => void;
+  openAi: (tab: "export" | "import") => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", away);
+    return () => document.removeEventListener("mousedown", away);
+  }, [open]);
+  const item = "w-full flex items-start gap-2.5 px-2.5 py-2 rounded-xl text-left hover:bg-[var(--hover)]";
+  return (
+    <div className="relative" ref={wrap}>
+      <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${open ? "bg-[var(--hover)]" : "hover:bg-[var(--hover)]"}`}
+              onClick={() => setOpen(o => !o)}
+              title={canEdit ? "Export this scaffold, or import an edited one" : "Export this scaffold"}>
+        {ICONS.export}<span className="hidden sm:inline">{canEdit ? "Export / import" : "Export"}</span>
+      </button>
+      {open && (
+        <div className="panel absolute bottom-[46px] left-1/2 -translate-x-1/2 w-[268px] rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-2xl p-1.5 z-40">
+          <button className={item} onClick={() => { setOpen(false); exportPng(); }}>
+            <span className="text-[var(--muted)] mt-0.5">{ICONS.image}</span>
+            <span className="min-w-0">
+              <span className="block text-[12.5px] font-semibold">PNG image</span>
+              <span className="block text-[11px] text-[var(--muted)] leading-snug">The whole sitemap as a picture</span>
+            </span>
+          </button>
+          <button className={item} onClick={() => { setOpen(false); openAi("export"); }}>
+            <span className="text-[var(--muted)] mt-0.5">{ICONS.md}</span>
+            <span className="min-w-0">
+              <span className="block text-[12.5px] font-semibold">Markdown for AI</span>
+              <span className="block text-[11px] text-[var(--muted)] leading-snug">Hand it to your own AI, edit it there, bring it back</span>
+            </span>
+          </button>
+          {canEdit && (
+            <button className={item} onClick={() => { setOpen(false); openAi("import"); }}>
+              <span className="text-[var(--muted)] mt-0.5">{ICONS.upload}</span>
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-semibold">Import edited Markdown</span>
+                <span className="block text-[11px] text-[var(--muted)] leading-snug">Review every change before it lands</span>
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 

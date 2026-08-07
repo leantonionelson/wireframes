@@ -1,8 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { LogoMark, ThemeToggle } from "@/components/Theme";
 import { LoginModal, logout, useAuth } from "@/components/Auth";
+import { AiExchangeModal } from "@/components/AiExchange";
+import { starterDoc } from "@/lib/md";
+import type { Doc } from "@/lib/model";
 
 type Row = { id: string; name: string; rev: number; updatedAt: number; updatedBy: string };
 
@@ -23,6 +26,29 @@ export default function ProjectList() {
     if (!name.trim()) return;
     const j = await fetch("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name }) }).then(r => r.json());
     window.location.href = `/p/${j.doc.id}`;
+  };
+
+  // Build a whole scaffold from a finished brief: create the empty project,
+  // then write the parsed document into it in one revision-checked save.
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [briefName, setBriefName] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const base = useMemo(() => starterDoc(briefName), [briefName]);
+  const createFromBrief = async (next: Doc) => {
+    setBusy("Creating…");
+    try {
+      const made = await fetch("/api/projects", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: next.name }) }).then(r => r.json());
+      if (!made.doc) throw new Error(made.error || "could not create the project");
+      const doc: Doc = { ...next, id: made.doc.id, rev: made.doc.rev };
+      const saved = await fetch("/api/doc", { method: "PUT", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ baseRev: made.doc.rev, doc, by: "brief" }) });
+      if (!saved.ok) throw new Error("the project was created but the brief did not save");
+      window.location.href = `/p/${made.doc.id}`;
+    } catch (e) {
+      setBusy(null);
+      alert(String((e as Error).message ?? e));
+    }
   };
 
   return (
@@ -51,10 +77,19 @@ export default function ProjectList() {
         <p className="tk text-[12px] text-[var(--muted)] mt-2 mb-10">collaborative sitemaps &amp; wireframes · one scaffold per page · share a project by sharing its url</p>
 
         {auth.canEdit && (
-          <div className="flex gap-2 mb-10 p-1.5 rounded-full bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] shadow-sm">
-            <input className="flex-1 rounded-full px-4 py-2 bg-transparent outline-none placeholder-[var(--muted)]" placeholder="New project name"
-                   value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && create()} />
-            <button className="px-5 py-2 rounded-full bg-[var(--accent)] text-white font-medium hover:opacity-90" onClick={create}>Create</button>
+          <div className="mb-10">
+            <div className="flex gap-2 p-1.5 rounded-full bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] shadow-sm">
+              <input className="flex-1 rounded-full px-4 py-2 bg-transparent outline-none placeholder-[var(--muted)]" placeholder="New project name"
+                     value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && create()} />
+              <button className="px-5 py-2 rounded-full bg-[var(--accent)] text-white font-medium hover:opacity-90" onClick={create}>Create</button>
+            </div>
+            <button className="mt-2.5 ml-1.5 flex items-center gap-2 text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)]"
+                    onClick={() => { setBriefName(name); setBriefOpen(true); }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9 17v-4l2 2 2-2v4" />
+              </svg>
+              or build one from scratch with your AI
+            </button>
           </div>
         )}
 
@@ -82,6 +117,11 @@ export default function ProjectList() {
           </div>
         ))}
       </div>
+      {briefOpen && (
+        <AiExchangeModal mode="create" doc={base} canEdit={auth.canEdit}
+                         name={briefName} setName={setBriefName} busy={busy}
+                         apply={createFromBrief} onClose={() => !busy && setBriefOpen(false)} />
+      )}
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => auth.refresh()} />}
     </main>
   );
