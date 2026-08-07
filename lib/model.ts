@@ -41,6 +41,20 @@ export interface Page {
   blocks: Block[];
 }
 
+// A note pinned onto the wireframe itself: anchored to a page card or to a
+// specific block within it, at a fractional position inside the anchor's
+// rect so it stays put through zoom and tree-layout changes.
+export interface PinNote {
+  id: string;
+  pageId: string;
+  blockId?: string;  // when set, anchor is the block; otherwise the page card
+  fx: number;        // 0..1 across the anchor's width
+  fy: number;        // 0..1 down the anchor's height
+  text: string;
+  author: string;
+  at: number;        // epoch ms
+}
+
 export interface Persona {
   id: string;
   name: string;
@@ -69,6 +83,7 @@ export interface Doc {
   pages: Page[];
   personas: Persona[];
   journeys: Journey[];
+  notes: PinNote[];
 }
 
 export const PERSONA_COLORS = ["#8b5cf6", "#f59e0b", "#0ea5e9", "#10b981", "#ef4444", "#ec4899"];
@@ -81,7 +96,7 @@ export function normDoc(d: Doc): Doc {
     steps: ((j.steps ?? []) as unknown as (string | JourneyStep)[]).map(s =>
       typeof s === "string" ? { pageId: s, note: "" } : s),
   }));
-  return { ...d, personas: d.personas ?? [], journeys };
+  return { ...d, personas: d.personas ?? [], journeys, notes: d.notes ?? [] };
 }
 
 export const COLOR_STYLES: Record<ColorRole, { bg: string; fg: string; label: string }> = {

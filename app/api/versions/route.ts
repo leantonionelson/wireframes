@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createVersion, getVersion, listVersions } from "@/lib/store";
+import { isAuthed } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 const noStore = { "cache-control": "no-store" };
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!isAuthed(req)) return NextResponse.json({ error: "read-only: log in to save versions" }, { status: 401, headers: noStore });
     const { projectId, name, by } = await req.json() as { projectId: string; name: string; by: string };
     if (!projectId) return NextResponse.json({ error: "projectId required" }, { status: 400, headers: noStore });
     await createVersion(projectId, name, by);

@@ -184,5 +184,6 @@ export function seedDoc(): Doc {
     pages: [home, jobsearch, wycdh, slTemplate, wiltwh, htju, postApply, faq, sf],
     personas,
     journeys,
+    notes: [],
   };
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Doc } from "@/lib/model";
 import { readProject, saveProject } from "@/lib/store";
+import { isAuthed } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 const noStore = { "cache-control": "no-store" };
@@ -22,6 +23,7 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+  if (!isAuthed(req)) return NextResponse.json({ error: "read-only: log in to edit" }, { status: 401, headers: noStore });
   const body = await req.json() as { baseRev: number; doc: Doc; by: string };
   const r = await saveProject(body.doc, body.baseRev, body.by);
   if (!r.doc) return NextResponse.json({ error: "not found" }, { status: 404, headers: noStore });

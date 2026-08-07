@@ -1,11 +1,12 @@
 "use client";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { COLOR_STYLES, CHROME_ROLES, PERSONA_COLORS, blockStyle, readableOn, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona, blankBlock, uid } from "@/lib/model";
+import { COLOR_STYLES, CHROME_ROLES, PERSONA_COLORS, blockStyle, readableOn, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona, type PinNote, blankBlock, uid } from "@/lib/model";
 import { GLYPHS, Glyph } from "@/lib/glyphs";
 import { LogoMark, ThemeToggle } from "@/components/Theme";
+import { LoginModal, logout, useAuth } from "@/components/Auth";
 
 type Sel = { pageId: string; blockId?: string } | null;
-type Snap = Pick<Doc, "name" | "pages" | "personas" | "journeys">;
+type Snap = Pick<Doc, "name" | "pages" | "personas" | "journeys" | "notes">;
 type Panel = "inspector" | "history" | "journeys" | null;
 const COLOR_ORDER: ColorRole[] = ["header", "nav", "content", "footer", "external"];
 
@@ -71,6 +72,15 @@ export default function Editor({ projectId }: { projectId: string }) {
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState("loading");
   const [me, setMe] = useState("");
+  const [pinMode, setPinMode] = useState(false);
+  const [notesVisible, setNotesVisible] = useState(true);
+  const [openNote, setOpenNote] = useState<string | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [shared, setShared] = useState(false);
+  const auth = useAuth();
+  const canEdit = auth.canEdit;
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
   const docRef = useRef<Doc | null>(null);
   docRef.current = doc;
   const dirtyRef = useRef(false);
@@ -116,8 +126,9 @@ export default function Editor({ projectId }: { projectId: string }) {
     }, 700);
   }, []);
 
-  const snapOf = (d: Doc): Snap => structuredClone({ name: d.name, pages: d.pages, personas: d.personas, journeys: d.journeys });
+  const snapOf = (d: Doc): Snap => structuredClone({ name: d.name, pages: d.pages, personas: d.personas, journeys: d.journeys, notes: d.notes });
   const mutate = useCallback((fn: (d: Doc) => Doc) => {
+    if (!canEditRef.current) return;
     setDoc(prev => {
       if (!prev) return prev;
       history.current.past.push(snapOf(prev));
@@ -129,6 +140,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   }, [scheduleSave]);
 
   const undo = useCallback(() => {
+    if (!canEditRef.current) return;
     const cur = docRef.current;
     const s = history.current.past.pop();
     if (!cur || !s) return;
@@ -138,6 +150,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   }, [scheduleSave]);
 
   const redo = useCallback(() => {
+    if (!canEditRef.current) return;
     const cur = docRef.current;
     const s = history.current.future.pop();
     if (!cur || !s) return;
@@ -154,7 +167,7 @@ export default function Editor({ projectId }: { projectId: string }) {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
       }
-      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsOpen(false); }
+      if (e.key === "Escape") { setDetailPageId(null); setPanel(null); setSel(null); setRecording(null); setWsOpen(false); setPinMode(false); setOpenNote(null); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -232,6 +245,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       walk(pid);
       d.pages = d.pages.filter(p => !doomed.has(p.id));
       d.journeys.forEach(j => { j.steps = j.steps.filter(s => !doomed.has(s.pageId)); });
+      d.notes = d.notes.filter(n => !doomed.has(n.pageId));
       return d;
     });
     setSel(null); if (panel === "inspector") setPanel(null);
@@ -269,7 +283,7 @@ export default function Editor({ projectId }: { projectId: string }) {
     b.color = COLOR_ORDER[(COLOR_ORDER.indexOf(b.color) + 1) % COLOR_ORDER.length];
     return d;
   });
-  const deleteBlock = (pid: string, bid: string) => { mutate(d => { const p = d.pages.find(p => p.id === pid)!; p.blocks = p.blocks.filter(b => b.id !== bid); return d; }); setSel({ pageId: pid }); };
+  const deleteBlock = (pid: string, bid: string) => { mutate(d => { const p = d.pages.find(p => p.id === pid)!; p.blocks = p.blocks.filter(b => b.id !== bid); d.notes = d.notes.filter(n => n.blockId !== bid); return d; }); setSel({ pageId: pid }); };
   const addComment = (pid: string, bid: string, text: string) =>
     mutate(d => { const p = d.pages.find(p => p.id === pid)!; p.blocks.find(b => b.id === bid)!.comments.push({ id: uid(), author: me, text, at: Date.now() }); return d; });
 
@@ -308,6 +322,34 @@ export default function Editor({ projectId }: { projectId: string }) {
   });
   const deleteJourney = (jid: string) => { mutate(d => { d.journeys = d.journeys.filter(j => j.id !== jid); return d; }); if (recording === jid) setRecording(null); if (active === jid) setActive(null); };
 
+  /* pinned notes */
+  const addNote = (pageId: string, blockId: string | undefined, fx: number, fy: number) => {
+    const nid = uid();
+    mutate(d => { d.notes.push({ id: nid, pageId, blockId, fx, fy, text: "", author: me || "anon", at: Date.now() }); return d; });
+    setOpenNote(nid);
+  };
+  const patchNote = (nid: string, text: string) =>
+    mutate(d => { const n = d.notes.find(n => n.id === nid); if (n) n.text = text; return d; });
+  const deleteNote = (nid: string) => { mutate(d => { d.notes = d.notes.filter(n => n.id !== nid); return d; }); setOpenNote(null); };
+
+  // In pin mode a transparent catcher sits over the canvas; find what the
+  // click landed on underneath it and anchor to the block first, page second.
+  const placePin = (e: React.MouseEvent) => {
+    const els = document.elementsFromPoint(e.clientX, e.clientY);
+    const anchor = (els.find(el => el.id?.startsWith("blk-")) ?? els.find(el => el.id?.startsWith("page-"))) as HTMLElement | undefined;
+    if (!anchor) return; // empty canvas: stay in pin mode
+    const r = anchor.getBoundingClientRect();
+    const fx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const fy = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    const isBlk = anchor.id.startsWith("blk-");
+    const pageId = isBlk
+      ? docRef.current?.pages.find(p => p.blocks.some(b => `blk-${b.id}` === anchor.id))?.id
+      : anchor.id.slice(5);
+    if (!pageId) return;
+    addNote(pageId, isBlk ? anchor.id.slice(4) : undefined, fx, fy);
+    setPinMode(false);
+  };
+
   const exportPng = async () => {
     const node = canvasRef.current?.querySelector(".tree") as HTMLElement | null;
     if (!node || !docRef.current) return;
@@ -335,7 +377,7 @@ export default function Editor({ projectId }: { projectId: string }) {
     const kids = childrenOf.get(p.id) ?? [];
     return (
       <li key={p.id}>
-        <PageCard page={p} sel={sel} setSel={handleSelect} rename={renamePage} addBlock={addBlock} addChild={addChildPage} personas={doc.personas} />
+        <PageCard page={p} sel={sel} setSel={handleSelect} rename={renamePage} addBlock={addBlock} addChild={addChildPage} personas={doc.personas} canEdit={canEdit} />
         {kids.length > 0 && <ul>{kids.map(renderPage)}</ul>}
       </li>
     );
@@ -359,10 +401,24 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {activeJourney && <JourneyOverlay journey={activeJourney} personas={doc.personas} deps={[view, doc, active]} />}
 
+      {/* pinned notes */}
+      {notesVisible && doc.notes.length > 0 && (
+        <NotesLayer notes={doc.notes} openId={openNote} setOpenId={setOpenNote} canEdit={canEdit}
+                    patchNote={patchNote} deleteNote={deleteNote} deps={[view, doc, notesVisible, openNote]} />
+      )}
+      {pinMode && <div className="fixed inset-0 z-[19] cursor-crosshair" onClick={placePin} />}
+      {pinMode && (
+        <div className="cluster absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 pl-4 pr-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-amber-500/60 rounded-full shadow-lg">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+          <span className="text-[12.5px]">Click a page or block to pin a note</span>
+          <button className="px-3 py-1 rounded-full bg-[var(--accent)] text-white text-[12px]" onClick={() => setPinMode(false)}>Cancel</button>
+        </div>
+      )}
+
       {/* top-left: project identity */}
       <div className="cluster absolute top-4 left-4 z-20 flex items-center gap-2.5 pl-4 pr-3.5 py-2 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg max-w-[46vw]">
         <a href="/" title="All projects" className="flex items-center text-[var(--accent)] shrink-0"><LogoMark /></a>
-        <input className="font-semibold text-[14px] bg-transparent outline-none min-w-0 w-[220px]" value={doc.name}
+        <input className="font-semibold text-[14px] bg-transparent outline-none min-w-0 w-[220px]" value={doc.name} readOnly={!canEdit}
                onChange={e => mutate(d => { d.name = e.target.value; return d; })} />
         <span className={`shrink-0 w-2 h-2 rounded-full ${status === "saved" ? "bg-emerald-400" : status === "saving" || status === "editing" ? "bg-amber-400" : "bg-red-400"}`}
               title={`${status} · last edit ${doc.updatedBy}`} />
@@ -370,8 +426,25 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {/* top-right: people & theme */}
       <div className="cluster absolute top-4 right-4 z-20 flex items-center gap-2 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
-        <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="You">{(me || "??").slice(0, 2).toUpperCase()}</span>
-        <input className="tk border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent text-[11px] hidden sm:block" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
+        {auth.enabled && !auth.authed && (
+          <button className="flex items-center gap-1.5 pl-2.5 pr-3 py-1 rounded-full border border-[var(--border)] text-[11.5px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"
+                  onClick={() => setLoginOpen(true)}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            View only · Log in
+          </button>
+        )}
+        {canEdit && (
+          <>
+            <span className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--accent)] text-white text-[10px] font-bold" title="You">{(me || "??").slice(0, 2).toUpperCase()}</span>
+            <input className="tk border border-[var(--border)] rounded-full px-3 py-1 w-24 bg-transparent text-[11px] hidden sm:block" value={me} placeholder="your name" onChange={e => changeMe(e.target.value)} />
+          </>
+        )}
+        {auth.enabled && auth.authed && (
+          <button className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" title="Log out"
+                  onClick={async () => { await logout(); auth.refresh(); }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          </button>
+        )}
         <ThemeToggle />
       </div>
 
@@ -386,24 +459,48 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {/* bottom-center: tools */}
       <div className="cluster absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
-        <button className={pillBtn} onClick={undo} title="Undo (Cmd/Ctrl+Z)">{ICONS.undo}</button>
-        <button className={pillBtn} onClick={redo} title="Redo (Cmd/Ctrl+Shift+Z)">{ICONS.redo}</button>
-        <span className="w-px h-5 bg-[var(--border)]" />
-        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={() => addChildPage(null)} title="Add top-level page">
-          {ICONS.plus}<span className="hidden sm:inline">Page</span>
-        </button>
+        {canEdit && (
+          <>
+            <button className={pillBtn} onClick={undo} title="Undo (Cmd/Ctrl+Z)">{ICONS.undo}</button>
+            <button className={pillBtn} onClick={redo} title="Redo (Cmd/Ctrl+Shift+Z)">{ICONS.redo}</button>
+            <span className="w-px h-5 bg-[var(--border)]" />
+            <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={() => addChildPage(null)} title="Add top-level page">
+              {ICONS.plus}<span className="hidden sm:inline">Page</span>
+            </button>
+            <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${pinMode ? "bg-amber-400 text-amber-950" : "hover:bg-[var(--hover)]"}`}
+                    onClick={() => setPinMode(m => !m)} title="Pin a note to the wireframe">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5M9 4h6l1 7 2 2H6l2-2 1-7z"/></svg>
+              <span className="hidden sm:inline">Note</span>
+            </button>
+          </>
+        )}
+        {doc.notes.length > 0 && (
+          <button className={pillBtn} onClick={() => setNotesVisible(v => !v)}
+                  title={notesVisible ? "Hide pinned notes" : `Show pinned notes (${doc.notes.length})`}>
+            {notesVisible
+              ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22M14.12 14.12a3 3 0 1 1-4.24-4.24"/></svg>}
+          </button>
+        )}
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={exportPng} title="Export PNG">
           {ICONS.export}<span className="hidden sm:inline">Export</span>
+        </button>
+        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]"
+                title="Copy link — anyone with it can view, editing needs the password"
+                onClick={async () => { await navigator.clipboard.writeText(window.location.href); setShared(true); setTimeout(() => setShared(false), 1500); }}>
+          {shared ? ICONS.check : ICONS.copy}<span className="hidden sm:inline">{shared ? "Copied" : "Share"}</span>
         </button>
         <span className="w-px h-5 bg-[var(--border)]" />
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] hover:bg-[var(--hover)]"
                 onClick={() => { setWsOpen(true); setWsTab(t => t ?? (docRef.current?.personas[0]?.id ?? null)); }} title="User journeys">
           {ICONS.route}<span className="hidden sm:inline">User journeys</span>
         </button>
-        <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
-                onClick={() => setPanel(panel === "history" ? null : "history")} title="Version history">
-          {ICONS.clock}<span className="hidden sm:inline">History</span>
-        </button>
+        {canEdit && (
+          <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
+                  onClick={() => setPanel(panel === "history" ? null : "history")} title="Version history">
+            {ICONS.clock}<span className="hidden sm:inline">History</span>
+          </button>
+        )}
       </div>
 
       {/* bottom-right: intent legend, sits above the zoom cluster.
@@ -434,7 +531,9 @@ export default function Editor({ projectId }: { projectId: string }) {
       {/* floating per-element toolbar */}
       {selPage && !detailPage && !recording && (
         <FloatingToolbar targetId={selBlock ? `blk-${selBlock.id}` : `page-${selPage.id}`} deps={[view, doc, sel]}>
-          {selBlock ? (
+          {!canEdit ? (
+            <button className={pillBtn} title="Page detail & copy" onClick={() => setDetailPageId(selPage.id)}>{ICONS.detail}</button>
+          ) : selBlock ? (
             <>
               <button className={pillBtn} title="Move up" onClick={() => moveBlock(selPage.id, selBlock.id, -1)}>{ICONS.up}</button>
               <button className={pillBtn} title="Move down" onClick={() => moveBlock(selPage.id, selBlock.id, 1)}>{ICONS.down}</button>
@@ -479,7 +578,75 @@ export default function Editor({ projectId }: { projectId: string }) {
         active={active} setActive={setActive}
         record={(jid) => { setRecording(jid); setWsOpen(false); }}
         onClose={() => setWsOpen(false)} />}
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => auth.refresh()} />}
     </div>
+  );
+}
+
+/* ---------- pinned notes overlay ---------- */
+function NotesLayer({ notes, openId, setOpenId, canEdit, patchNote, deleteNote, deps }: {
+  notes: PinNote[];
+  openId: string | null;
+  setOpenId: (id: string | null) => void;
+  canEdit: boolean;
+  patchNote: (id: string, text: string) => void;
+  deleteNote: (id: string) => void;
+  deps: unknown[];
+}) {
+  const [pos, setPos] = useState<Record<string, { x: number; y: number }>>({});
+  useLayoutEffect(() => {
+    const next: Record<string, { x: number; y: number }> = {};
+    notes.forEach(n => {
+      // Anchor to the block when it still exists, else fall back to its page.
+      const el = (n.blockId ? document.getElementById(`blk-${n.blockId}`) : null)
+              ?? document.getElementById(`page-${n.pageId}`);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      next[n.id] = { x: r.left + n.fx * r.width, y: r.top + n.fy * r.height };
+    });
+    setPos(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  const open = openId ? notes.find(n => n.id === openId) : undefined;
+  const op = open ? pos[open.id] : undefined;
+  const px = op ? Math.min(op.x + 14, (typeof window !== "undefined" ? window.innerWidth : 1200) - 296) : 0;
+  const py = op ? Math.min(Math.max(op.y - 10, 64), (typeof window !== "undefined" ? window.innerHeight : 800) - 220) : 0;
+  return (
+    <>
+      {notes.map((n, i) => {
+        const p = pos[n.id];
+        if (!p) return null;
+        return (
+          <button key={n.id}
+                  className={`fixed z-[22] w-5 h-5 -ml-2.5 -mt-2.5 rounded-full text-[10px] font-bold flex items-center justify-center shadow-md border-2 border-white transition-transform hover:scale-110 ${openId === n.id ? "bg-amber-500 text-white scale-110" : "bg-amber-400 text-amber-950"}`}
+                  style={{ left: p.x, top: p.y }}
+                  title={`${n.author}: ${n.text.slice(0, 60) || "(empty note)"}`}
+                  onClick={e => { e.stopPropagation(); setOpenId(openId === n.id ? null : n.id); }}>
+            {i + 1}
+          </button>
+        );
+      })}
+      {open && op && (
+        <div className="panel fixed z-[35] w-[280px] bg-[var(--card)] border border-[var(--border)] rounded-2xl shadow-2xl p-3.5"
+             style={{ left: px, top: py }} onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+            <span className="tk text-[10.5px] text-[var(--muted)] truncate">{open.author} · {new Date(open.at).toLocaleString()}</span>
+            {canEdit && (
+              <button className="ml-auto text-[var(--muted)] hover:text-red-500 shrink-0" title="Delete note" onClick={() => deleteNote(open.id)}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+              </button>
+            )}
+            <button className={`${canEdit ? "" : "ml-auto "}text-[var(--muted)] hover:text-[var(--ink)] shrink-0`} title="Close" onClick={() => setOpenId(null)}>{ICONS.close}</button>
+          </div>
+          {canEdit
+            ? <textarea autoFocus className="autogrow w-full bg-transparent outline-none text-[13px] leading-relaxed min-h-[56px]"
+                        placeholder="What should the team know here?"
+                        value={open.text} onChange={e => patchNote(open.id, e.target.value)} />
+            : <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{open.text || <span className="text-[var(--muted)]">(empty note)</span>}</p>}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -541,11 +708,12 @@ function FloatingToolbar({ targetId, deps, children }: { targetId: string; deps:
 }
 
 /* ---------- page card on canvas ---------- */
-function PageCard({ page, sel, setSel, rename, addBlock, addChild, personas }: {
+function PageCard({ page, sel, setSel, rename, addBlock, addChild, personas, canEdit }: {
   page: Page; sel: Sel; setSel: (s: Sel) => void;
   rename: (pid: string, name: string) => void;
   addBlock: (pid: string) => void; addChild: (pid: string) => void;
   personas: Persona[];
+  canEdit: boolean;
 }) {
   const active = sel?.pageId === page.id && !sel?.blockId;
   return (
@@ -578,13 +746,15 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild, personas }: {
             </div>
           );
         })}
-        <div className="flex gap-1">
-          <button className="flex-1 text-[10.5px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
-                  onClick={e => { e.stopPropagation(); addBlock(page.id); }}>+ block</button>
-          <button className="flex-1 text-[10.5px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
-                  title="Add a child page below this one"
-                  onClick={e => { e.stopPropagation(); addChild(page.id); }}>+ page</button>
-        </div>
+        {canEdit && (
+          <div className="flex gap-1">
+            <button className="flex-1 text-[10.5px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
+                    onClick={e => { e.stopPropagation(); addBlock(page.id); }}>+ block</button>
+            <button className="flex-1 text-[10.5px] text-[var(--muted)] hover:text-[var(--accent)] border border-dashed border-[var(--border)] rounded-full py-0.5"
+                    title="Add a child page below this one"
+                    onClick={e => { e.stopPropagation(); addChild(page.id); }}>+ page</button>
+          </div>
+        )}
       </div>
     </div>
   );

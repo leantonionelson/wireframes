@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createProject, deleteProject, listProjects } from "@/lib/store";
+import { isAuthed } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -11,6 +12,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (!isAuthed(req)) return NextResponse.json({ error: "read-only: log in to create projects" }, { status: 401 });
   const { name } = await req.json() as { name: string };
   if (!name?.trim()) return NextResponse.json({ error: "name required" }, { status: 400 });
   const doc = await createProject(name.trim());
@@ -19,6 +21,7 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    if (!isAuthed(req)) return NextResponse.json({ error: "read-only: log in to delete projects" }, { status: 401 });
     const id = req.nextUrl.searchParams.get("id") ?? "";
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
     await deleteProject(id);
