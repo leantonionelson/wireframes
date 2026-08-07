@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { COLOR_STYLES, PERSONA_COLORS, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona, blankBlock, uid } from "@/lib/model";
+import { COLOR_STYLES, CHROME_ROLES, PERSONA_COLORS, blockStyle, readableOn, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona, blankBlock, uid } from "@/lib/model";
 import { GLYPHS, Glyph } from "@/lib/glyphs";
 import { LogoMark, ThemeToggle } from "@/components/Theme";
 
@@ -335,7 +335,7 @@ export default function Editor({ projectId }: { projectId: string }) {
     const kids = childrenOf.get(p.id) ?? [];
     return (
       <li key={p.id}>
-        <PageCard page={p} sel={sel} setSel={handleSelect} rename={renamePage} addBlock={addBlock} addChild={addChildPage} />
+        <PageCard page={p} sel={sel} setSel={handleSelect} rename={renamePage} addBlock={addBlock} addChild={addChildPage} personas={doc.personas} />
         {kids.length > 0 && <ul>{kids.map(renderPage)}</ul>}
       </li>
     );
@@ -406,6 +406,23 @@ export default function Editor({ projectId }: { projectId: string }) {
         </button>
       </div>
 
+      {/* bottom-right: intent legend, sits above the zoom cluster.
+          Each intent opens User journeys on its own tab. */}
+      {doc.personas.length > 0 && (
+        <div className="cluster absolute bottom-16 right-4 z-20 flex flex-col items-stretch gap-0.5 p-1 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-lg">
+          <span className="text-[9px] uppercase tracking-wide text-[var(--muted)] px-2 pt-0.5 pb-1">Intent</span>
+          {doc.personas.map(p => (
+            <button key={p.id}
+                    title={`Open user journeys: ${p.name}`}
+                    onClick={() => { setWsTab(p.id); setWsOpen(true); }}
+                    className="flex items-center gap-1.5 text-[11px] rounded-full pl-1.5 pr-2.5 py-1 hover:bg-[var(--hover)] text-[var(--ink)] text-left">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.color }} />
+              <span className="truncate">{p.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* bottom-right: zoom */}
       <div className="cluster absolute bottom-4 right-4 z-20 flex items-center px-1 py-1 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
         <button className="px-3 py-1 rounded-full hover:bg-[var(--hover)] text-[12px]" onClick={() => setView({ x: 60, y: 84, k: 0.8 })}>Fit</button>
@@ -422,7 +439,7 @@ export default function Editor({ projectId }: { projectId: string }) {
               <button className={pillBtn} title="Move up" onClick={() => moveBlock(selPage.id, selBlock.id, -1)}>{ICONS.up}</button>
               <button className={pillBtn} title="Move down" onClick={() => moveBlock(selPage.id, selBlock.id, 1)}>{ICONS.down}</button>
               <button className={pillBtn} title="Cycle colour" onClick={() => cycleColor(selPage.id, selBlock.id)}>
-                <span className="w-3.5 h-3.5 rounded-full" style={{ background: COLOR_STYLES[selBlock.color].bg }} />
+                <span className="w-3.5 h-3.5 rounded-full" style={{ background: blockStyle(selBlock, doc.personas).bg }} />
               </button>
               <button className={pillBtn} title="Duplicate" onClick={() => duplicateBlock(selPage.id, selBlock.id)}>{ICONS.dup}</button>
               <button className={pillBtn} title="Edit notes & wireframe" onClick={() => setPanel("inspector")}>{ICONS.edit}</button>
@@ -444,7 +461,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
       {panel === "inspector" && selPage && (
-        <Inspector page={selPage} block={selBlock} me={me}
+        <Inspector page={selPage} block={selBlock} me={me} personas={doc.personas}
           close={() => setPanel(null)}
           setPageNote={setPageNote}
           patchBlock={patchBlock} addComment={addComment} />
@@ -454,7 +471,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
 
-      {detailPage && <DetailModal page={detailPage} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
+      {detailPage && <DetailModal page={detailPage} personas={doc.personas} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
       {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab}
         patchPersona={patchPersona} addPersona={addPersona} deletePersona={deletePersona}
         patchJourney={patchJourney} patchStep={patchStep} addStep={appendStep} removeStep={removeStep}
@@ -524,10 +541,11 @@ function FloatingToolbar({ targetId, deps, children }: { targetId: string; deps:
 }
 
 /* ---------- page card on canvas ---------- */
-function PageCard({ page, sel, setSel, rename, addBlock, addChild }: {
+function PageCard({ page, sel, setSel, rename, addBlock, addChild, personas }: {
   page: Page; sel: Sel; setSel: (s: Sel) => void;
   rename: (pid: string, name: string) => void;
   addBlock: (pid: string) => void; addChild: (pid: string) => void;
+  personas: Persona[];
 }) {
   const active = sel?.pageId === page.id && !sel?.blockId;
   return (
@@ -541,7 +559,7 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild }: {
       </div>
       <div className="p-1.5 pt-1 flex flex-col gap-1">
         {page.blocks.map(b => {
-          const c = COLOR_STYLES[b.color];
+          const c = blockStyle(b, personas);
           const on = sel?.pageId === page.id && sel?.blockId === b.id;
           return (
             <div key={b.id} id={`blk-${b.id}`}
@@ -550,6 +568,9 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild }: {
                  onClick={e => { e.stopPropagation(); setSel({ pageId: page.id, blockId: b.id }); }}>
               <div className="flex items-center gap-1 text-[10.5px] font-semibold leading-tight">
                 <span className="truncate">{b.label}</span>
+                {c.extra.map((col, i) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
+                ))}
                 {b.flag && <span title={b.flag} className="ml-auto text-[9px] bg-red-600 text-white rounded px-1">!</span>}
                 {b.comments.length > 0 && <span className="text-[9px] bg-white/25 rounded px-1">{b.comments.length}</span>}
               </div>
@@ -570,13 +591,24 @@ function PageCard({ page, sel, setSel, rename, addBlock, addChild }: {
 }
 
 /* ---------- read & copy detail modal ---------- */
-function DetailModal({ page, setPageNote, patchBlock, addBlk, onClose }: {
+function DetailModal({ page, personas, setPageNote, patchBlock, addBlk, onClose }: {
   page: Page;
+  personas: Persona[];
   setPageNote: (pid: string, n: string) => void;
   patchBlock: (pid: string, bid: string, patch: Partial<Block>) => void;
   addBlk: () => void;
   onClose: () => void;
 }) {
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [focusedBlock, setFocusedBlock] = useState<string | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
+  const revealBlock = (bid: string) => {
+    cardRefs.current[bid]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setFocusedBlock(bid);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFocusedBlock(null), 1800);
+  };
   return (
     <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
       <div className="panel w-full max-w-5xl max-h-[90vh] rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
@@ -601,7 +633,10 @@ function DetailModal({ page, setPageNote, patchBlock, addBlk, onClose }: {
                         value={page.note} onChange={e => setPageNote(page.id, e.target.value)} />
             </div>
             {page.blocks.map(b => (
-              <div key={b.id} className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
+              <div key={b.id} ref={el => { cardRefs.current[b.id] = el; }}
+                   className={`rounded-2xl border bg-[var(--card)] p-5 transition-shadow duration-300 scroll-mt-2 ${
+                     focusedBlock === b.id ? "border-[var(--accent)]" : "border-[var(--border)]"}`}
+                   style={focusedBlock === b.id ? { boxShadow: "0 0 0 3px var(--accent-soft)" } : undefined}>
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <input className="font-bold text-[15px] bg-transparent outline-none flex-1 min-w-0" style={{ color: COLOR_STYLES[b.color].bg }}
                          value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
@@ -613,15 +648,18 @@ function DetailModal({ page, setPageNote, patchBlock, addBlk, onClose }: {
                 <input className="w-full text-[13.5px] text-[var(--ink)] bg-transparent outline-none"
                        placeholder="Component, e.g. AEM: Promotional Banner"
                        value={b.component} onChange={e => patchBlock(page.id, b.id, { component: e.target.value })} />
-                <input className="w-full text-[13px] text-red-500 font-medium mt-1.5 bg-transparent outline-none placeholder:text-red-300"
-                       placeholder="Red flag: custom component or pending decision…"
-                       value={b.flag} onChange={e => patchBlock(page.id, b.id, { flag: e.target.value })} />
+                <textarea className="autogrow w-full text-[13px] leading-relaxed text-red-500 font-medium mt-1.5 bg-transparent outline-none placeholder:text-red-300 min-h-[20px]"
+                          placeholder="Red flag: custom component or pending decision…"
+                          value={b.flag} onChange={e => patchBlock(page.id, b.id, { flag: e.target.value })} />
                 <div className="flex items-center gap-1.5 mt-2.5 pt-2 border-t border-[var(--border)]">
-                  {(Object.keys(COLOR_STYLES) as ColorRole[]).map(c => (
-                    <button key={c} title={COLOR_STYLES[c].label}
-                            className={`w-4 h-4 rounded-full ${b.color === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
-                            style={{ background: COLOR_STYLES[c].bg }} onClick={() => patchBlock(page.id, b.id, { color: c })} />
-                  ))}
+                  {CHROME_ROLES.includes(b.color)
+                    ? (Object.keys(COLOR_STYLES) as ColorRole[]).map(c => (
+                        <button key={c} title={COLOR_STYLES[c].label}
+                                className={`w-4 h-4 rounded-full ${b.color === c ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]" : ""}`}
+                                style={{ background: COLOR_STYLES[c].bg }} onClick={() => patchBlock(page.id, b.id, { color: c })} />
+                      ))
+                    : <IntentPicker block={b} personas={personas}
+                                    onChange={intents => patchBlock(page.id, b.id, { intents })} />}
                   <select className="ml-auto border border-[var(--border)] rounded-full px-2 py-0.5 bg-transparent text-[11px]"
                           value={b.glyph} onChange={e => patchBlock(page.id, b.id, { glyph: e.target.value as GlyphId })}>
                     {(Object.keys(GLYPHS) as GlyphId[]).map(g => <option key={g} value={g}>{GLYPHS[g].name}</option>)}
@@ -644,11 +682,22 @@ function DetailModal({ page, setPageNote, patchBlock, addBlk, onClose }: {
               <div className="text-center font-bold text-[12px] text-[var(--accent)] py-1.5">{page.name}</div>
               <div className="p-1.5 pt-0 flex flex-col gap-1">
                 {page.blocks.map(b => {
-                  const c = COLOR_STYLES[b.color];
+                  const c = blockStyle(b, personas);
                   return (
-                    <div key={b.id} className="rounded px-1.5 pt-1 pb-0.5" style={{ background: c.bg, color: c.fg }}>
-                      <input className="w-full text-[10px] font-semibold bg-transparent outline-none" style={{ color: c.fg }}
-                             value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
+                    <div key={b.id} onClick={() => revealBlock(b.id)}
+                         title="Jump to this block's description"
+                         className={`rounded px-1.5 pt-1 pb-0.5 cursor-pointer transition-shadow ${
+                           focusedBlock === b.id
+                             ? "ring-2 ring-offset-1 ring-[var(--accent)] ring-offset-[var(--card)]"
+                             : "hover:ring-2 hover:ring-white/40"}`}
+                         style={{ background: c.bg, color: c.fg }}>
+                      <div className="flex items-center gap-1">
+                        <input className="w-full text-[10px] font-semibold bg-transparent outline-none cursor-pointer focus:cursor-text" style={{ color: c.fg }}
+                               value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
+                        {c.extra.map((col, i) => (
+                          <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
+                        ))}
+                      </div>
                       <Glyph id={b.glyph} />
                     </div>
                   );
@@ -713,14 +762,50 @@ function HistoryPanel({ projectId, me, close, restore }: {
   );
 }
 
+/* ---------- intent picker ----------
+   Click to toggle an intent on the block. The first selected intent is the
+   primary and drives the block colour; click an already-primary intent's
+   chip again to promote the next one. Order is meaningful. */
+function IntentPicker({ block, personas, onChange }: {
+  block: Block; personas: Persona[]; onChange: (intents: string[]) => void;
+}) {
+  const cur = block.intents ?? [];
+  const toggle = (id: string) => {
+    if (!cur.includes(id)) return onChange([...cur, id]);
+    if (cur[0] === id) return onChange(cur.filter(x => x !== id));   // primary click removes
+    return onChange([id, ...cur.filter(x => x !== id)]);             // promote to primary
+  };
+  if (personas.length === 0) {
+    return <span className="text-[11px] text-[var(--muted)]">No intents defined yet</span>;
+  }
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {personas.map(p => {
+        const i = cur.indexOf(p.id);
+        const on = i >= 0, primary = i === 0;
+        return (
+          <button key={p.id} onClick={() => toggle(p.id)}
+                  title={primary ? `${p.name} (primary)` : on ? `${p.name} (also serves)` : `Tag as: ${p.name}`}
+                  className={`text-[10px] rounded-full pl-1.5 pr-2 py-0.5 border transition-colors flex items-center gap-1 ${
+                    on ? "border-transparent" : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)]"}`}
+                  style={on ? { background: p.color, color: readableOn(p.color) } : undefined}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: on ? "currentColor" : p.color }} />
+            {p.name}{primary && personas.length > 1 ? " ★" : ""}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ---------- mini wireframe stack ---------- */
-function MiniStack({ page }: { page: Page }) {
+function MiniStack({ page, personas = [] }: { page: Page; personas?: Persona[] }) {
   return (
     <div className="rounded-xl bg-[var(--card)] border-2 border-[var(--card-border)] overflow-hidden">
       <div className="text-center font-bold text-[11px] text-[var(--accent)] py-1 px-1 truncate">{page.name}</div>
       <div className="p-1 pt-0 flex flex-col gap-[3px]">
         {page.blocks.map(b => {
-          const c = COLOR_STYLES[b.color];
+          const c = blockStyle(b, personas);
           return (
             <div key={b.id} className="rounded px-1 pt-0.5" style={{ background: c.bg, color: c.fg }}>
               <div className="text-[8.5px] font-semibold truncate leading-tight">{b.label}</div>
@@ -816,7 +901,7 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
                      value={intent.desc} onChange={e => patchPersona(intent.id, { desc: e.target.value })} />
             </div>
             {journeys.map(j => (
-              <JourneyBoard key={j.id} j={j} color={intent.color} intentName={intent.name} pages={doc.pages}
+              <JourneyBoard key={j.id} j={j} color={intent.color} intentName={intent.name} pages={doc.pages} personas={doc.personas}
                 z={zOf(j.id)} setZ={setZFor(j.id)}
                 patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
                 deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
@@ -849,8 +934,8 @@ function UserJourneysModal({ doc, tab, setTab, patchPersona, addPersona, deleteP
   );
 }
 
-function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record, z, setZ }: {
-  j: Journey; color: string; intentName: string; pages: Page[];
+function JourneyBoard({ j, color, intentName, pages, personas, patchJourney, patchStep, addStep, removeStep, deleteJourney, active, setActive, record, z, setZ }: {
+  j: Journey; color: string; intentName: string; pages: Page[]; personas: Persona[];
   patchJourney: (jid: string, patch: Partial<Pick<Journey, "name" | "goal" | "entry" | "exit">>) => void;
   patchStep: (jid: string, idx: number, note: string) => void;
   addStep: (jid: string, pageId: string) => void;
@@ -929,7 +1014,7 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
                       <span className="text-[12px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
                       <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>
                     </div>
-                    {p ? <MiniStack page={p} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
+                    {p ? <MiniStack page={p} personas={personas} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
                     <textarea className="autogrow mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 min-h-[54px]"
                               placeholder="What do they do here? Evidence?"
                               value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
@@ -962,8 +1047,8 @@ function JourneyBoard({ j, color, intentName, pages, patchJourney, patchStep, ad
 }
 
 /* ---------- edit inspector ---------- */
-function Inspector({ page, block, me, close, setPageNote, patchBlock, addComment }: {
-  page: Page; block: Block | null; me: string; close: () => void;
+function Inspector({ page, block, me, personas, close, setPageNote, patchBlock, addComment }: {
+  page: Page; block: Block | null; me: string; personas: Persona[]; close: () => void;
   setPageNote: (pid: string, n: string) => void;
   patchBlock: (pid: string, bid: string, patch: Partial<Block>) => void;
   addComment: (pid: string, bid: string, text: string) => void;
@@ -999,7 +1084,7 @@ function Inspector({ page, block, me, close, setPageNote, patchBlock, addComment
                 ))}
               </div>
             </Field>
-            <Field label="Colour">
+            <Field label="Structural role">
               <div className="flex gap-1.5">
                 {(Object.keys(COLOR_STYLES) as ColorRole[]).map(c => (
                   <button key={c} title={COLOR_STYLES[c].label}
@@ -1009,6 +1094,12 @@ function Inspector({ page, block, me, close, setPageNote, patchBlock, addComment
                 ))}
               </div>
             </Field>
+            {!CHROME_ROLES.includes(block.color) && (
+              <Field label="Intent served (first is primary, and sets the colour)">
+                <IntentPicker block={block} personas={personas}
+                              onChange={intents => patchBlock(page.id, block.id, { intents })} />
+              </Field>
+            )}
             <Field label="Component">
               <input className="w-full border border-[var(--border)] rounded-lg p-2 bg-transparent" placeholder="AEM: Promotional Banner"
                      value={block.component} onChange={e => patchBlock(page.id, block.id, { component: e.target.value })} />

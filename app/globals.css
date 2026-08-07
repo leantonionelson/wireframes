@@ -31,12 +31,14 @@ body {
   --card:#ffffff; --card-border:rgba(59,130,246,.65);
   --border:rgba(15,23,42,.12); --hover:rgba(15,23,42,.05);
   --ink:#0f172a; --muted:#64748b; --accent:#2563eb; --connector:#a6b3c6;
+  --accent-soft:rgba(37,99,235,.22);
 }
 html[data-theme="dark"]{
   --bg:#0b0f17; --grid:#151c29; --glass:rgba(15,20,31,.55); --panel:rgba(15,20,31,.78);
   --card:#121828; --card-border:rgba(96,165,250,.5);
   --border:rgba(148,163,184,.18); --hover:rgba(148,163,184,.08);
   --ink:#e2e8f0; --muted:#7c8aa0; --accent:#60a5fa; --connector:#333f52;
+  --accent-soft:rgba(96,165,250,.28);
 }
 html,body{background:var(--bg);}
 body{font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,sans-serif;}

@@ -25,6 +25,10 @@ export interface Block {
   component: string;   // e.g. "AEM: Promotional Banner"
   flag: string;        // red flag text, empty if none
   comments: Comment[];
+  // Persona (intent) ids this block serves, most important first. The first
+  // entry drives the block's colour; the rest render as secondary dots.
+  // Empty means fall back to the structural `color` role.
+  intents?: string[];
 }
 
 export interface Page {
@@ -87,6 +91,34 @@ export const COLOR_STYLES: Record<ColorRole, { bg: string; fg: string; label: st
   footer:  { bg: "#10b981", fg: "#04352a", label: "Footer" },
   external:{ bg: "#64748b", fg: "#ffffff", label: "External system" },
 };
+
+// Chrome roles are shared by every intent, so they stay neutral rather than
+// claiming one intent's colour.
+export const CHROME_ROLES: ColorRole[] = ["header", "nav", "footer", "external"];
+const CHROME_STYLE = { bg: "#94a3b8", fg: "#0f172a" };
+
+/** Resolve how a block should be painted: intent colour when tagged, chrome
+ *  grey for header/nav/footer/external, structural colour otherwise. */
+export function blockStyle(b: Block, personas: Persona[]): { bg: string; fg: string; extra: string[] } {
+  const tagged = (b.intents ?? []).map(id => personas.find(p => p.id === id)).filter(Boolean) as Persona[];
+  const extra = tagged.slice(1).map(p => p.color);
+  if (tagged.length > 0 && !CHROME_ROLES.includes(b.color)) {
+    return { bg: tagged[0].color, fg: readableOn(tagged[0].color), extra };
+  }
+  if (CHROME_ROLES.includes(b.color)) return { ...CHROME_STYLE, extra };
+  const s = COLOR_STYLES[b.color];
+  return { bg: s.bg, fg: s.fg, extra };
+}
+
+/** Pick black or white text for a hex background by relative luminance. */
+export function readableOn(hex: string): string {
+  const h = hex.replace("#", "");
+  const v = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(v.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return L > 0.5 ? "#0f172a" : "#ffffff";
+}
 
 export function uid(): string {
   return Math.random().toString(36).slice(2, 9);
