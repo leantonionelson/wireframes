@@ -30,7 +30,7 @@ export default function ProjectList() {
       <div className="max-w-2xl mx-auto px-6 py-16">
         <div className="flex items-center gap-3">
           <span className="text-[var(--accent)]"><LogoMark size={26} /></span>
-          <h1 className="text-2xl font-bold tracking-tight">Scaffold</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Scaffolds</h1>
           <div className="ml-auto flex items-center gap-2">
             {auth.loaded && auth.enabled && !auth.authed && (
               <button className="flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-full border border-[var(--border)] text-[12px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"
@@ -48,7 +48,7 @@ export default function ProjectList() {
             <ThemeToggle />
           </div>
         </div>
-        <p className="tk text-[12px] text-[var(--muted)] mt-2 mb-10">collaborative sitemaps &amp; wireframes · share a project by sharing its url</p>
+        <p className="tk text-[12px] text-[var(--muted)] mt-2 mb-10">collaborative sitemaps &amp; wireframes · one scaffold per page · share a project by sharing its url</p>
 
         {auth.canEdit && (
           <div className="flex gap-2 mb-10 p-1.5 rounded-full bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] shadow-sm">
