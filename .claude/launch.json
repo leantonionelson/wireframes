@@ -2,13 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "octo",
+      "name": "scaffolds",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
         "dev",
         "--prefix",
-        "/Users/leantonionelson/projects/octo"
+        "/Users/leantonionelson/projects/scaffolds"
       ],
       "port": 3000,
       "autoPort": true
