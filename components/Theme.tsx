@@ -11,6 +11,25 @@ export function LogoMark({ size = 18 }: { size?: number }) {
   );
 }
 
+/** Full-screen loading state: the mark assembles itself bar by bar, which is
+ *  the scaffolding metaphor doing the work. Callers hold this for at least
+ *  one full cycle so the animation is never cut off mid-build. */
+export const SCAFFOLD_CYCLE_MS = 1600;
+
+export function ScaffoldingLoader({ label = "Scaffolding" }: { label?: string }) {
+  return (
+    <div className="h-screen w-full flex flex-col items-center justify-center gap-5 bg-[var(--bg)] text-[var(--accent)]">
+      <svg width="52" height="52" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <rect className="scaffold-bar" x="2" y="2.6" width="16" height="3.6" rx="1.8" />
+        <rect className="scaffold-bar" x="2" y="8.2" width="10.5" height="3.6" rx="1.8" opacity="0.75" />
+        <rect className="scaffold-bar" x="2" y="13.8" width="16" height="3.6" rx="1.8" opacity="0.5" />
+      </svg>
+      <p className="scaffold-word tk text-[12px] tracking-[0.22em] uppercase text-[var(--muted)]">{label}</p>
+      <span className="sr-only" role="status" aria-live="polite">{label}</span>
+    </div>
+  );
+}
+
 export function ThemeToggle() {
   const [theme, setTheme] = useState("");
   useEffect(() => { setTheme(document.documentElement.dataset.theme || "light"); }, []);

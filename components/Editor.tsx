@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { COLOR_STYLES, CHROME_ROLES, PERSONA_COLORS, blockStyle, readableOn, normDoc, type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona, type PinNote, blankBlock, uid } from "@/lib/model";
 import { GLYPHS, Glyph } from "@/lib/glyphs";
-import { LogoMark, ThemeToggle } from "@/components/Theme";
+import { LogoMark, ScaffoldingLoader, SCAFFOLD_CYCLE_MS, ThemeToggle } from "@/components/Theme";
 import { LoginModal, logout, useAuth } from "@/components/Auth";
 
 type Sel = { pageId: string; blockId?: string } | null;
@@ -86,6 +86,14 @@ export default function Editor({ projectId }: { projectId: string }) {
   dirtyRef.current = dirty;
   const annPending = useRef(0); // in-flight or debounced annotation ops; poll waits for them
   const history = useRef<{ past: Snap[]; future: Snap[] }>({ past: [], future: [] });
+
+  // Hold the loader for at least one full animation cycle, so a fast load
+  // does not flash a half-built mark.
+  const [cycleDone, setCycleDone] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setCycleDone(true), SCAFFOLD_CYCLE_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     setMe(localStorage.getItem("scaffold.name") || localStorage.getItem("octo.name") || "anon");
@@ -239,7 +247,20 @@ export default function Editor({ projectId }: { projectId: string }) {
     return m;
   }, [doc]);
 
-  if (!doc) return <div className="p-10 text-sm text-[var(--muted)]">Loading…</div>;
+  if (!doc || !cycleDone) {
+    // Only call it missing once the doc has actually come back empty.
+    if (status === "not found" && cycleDone) {
+      return (
+        <div className="h-screen flex flex-col items-center justify-center gap-3 bg-[var(--bg)] text-[var(--ink)]">
+          <span className="text-[var(--muted)]"><LogoMark size={34} /></span>
+          <p className="text-[14px] font-semibold">No scaffold here</p>
+          <p className="text-[12.5px] text-[var(--muted)]">This project does not exist, or the link is wrong.</p>
+          <a href="/" className="mt-1 px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-[12.5px]">All projects</a>
+        </div>
+      );
+    }
+    return <ScaffoldingLoader />;
+  }
 
   const selPage = sel ? doc.pages.find(p => p.id === sel.pageId) ?? null : null;
   const selBlock = selPage && sel?.blockId ? selPage.blocks.find(b => b.id === sel.blockId) ?? null : null;
