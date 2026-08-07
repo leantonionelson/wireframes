@@ -627,7 +627,6 @@ export default function Editor({ projectId }: { projectId: string }) {
           ) : (
             <>
               <button className={pillBtn} title="Add block" onClick={() => addBlock(selPage.id)}>{ICONS.plus}</button>
-              <button className={pillBtn} title="Add child page" onClick={() => addChildPage(selPage.id)}>{ICONS.page}</button>
               <button className={pillBtn} title="Page detail & copy" onClick={() => setDetailPageId(selPage.id)}>{ICONS.detail}</button>
               <button className={pillBtn} title="Edit page note" onClick={() => setPanel("inspector")}>{ICONS.edit}</button>
               <span className="w-px h-5 bg-[var(--border)] mx-0.5" />
