@@ -17,15 +17,15 @@ function page(name: string, parentId: string | null, order: number, note: string
 }
 
 const home = page("Careers at EY", null, 0,
-  "Purpose: the brand front door and the router. A quarter of arrivals return from the application system; most others carry broad job intent from search. Route intent fast, give researchers a reason to believe, hold no detail.\n\nUser wants: find jobs quickly (77% of in-page clicks are Find jobs); reach their own market (country selector is #5 page on ey.com); understand what EY offers.",
+  "Purpose: the brand front door and the router. A quarter of arrivals return from the application system; most others carry broad job intent from search. Route intent fast, give researchers a reason to believe, hold no detail.\n\nUser wants: find jobs quickly (77% of in-page clicks are Find jobs); reach their own market (country selector is #5 page on ey.com); understand what EY offers.\n\nInheritance: global publishes, AEM rollout carries the change to local sites with release notes, and local teams localise from there. Local publishing is a local action, not automatic: local teams localise, translate and prioritise, prompted by AEM release notes, the Friday comms, and direct briefing from the Global Careers team. Everything on this page propagates, so it is built once and built well.",
   [
     header(),
     nav("Job search, What you can do here, What it's like to work here, How to join us, FAQ. Order reflects usage: Job search carries 79% of subnav clicks."),
-    b("Hero with intent CTAs", "hero", { note: "Split the audience by intent in the first viewport: Search jobs / Explore careers at EY. Removes the false-positive problem of high-intent users hitting global site search.", component: "AEM: Hero Banner, image variant", flag: "Hero CTA buttons need confirming. US team previously resisted hero CTAs." }),
-    b("Market router", "map", { note: "“Looking for roles in your country?” Reads location or URL, offers the local careers site or pre-filtered job search. Stephanie: do not hold other markets' users on global. 195,260 visits to the country selector show users localising by hand.", flag: "Custom component. Depends on EY's answer on conditional logic and code freedom. Fallback: static country selector block." }),
+    b("Hero with intent CTAs", "hero", { note: "Split the audience by intent in the first viewport: Search jobs / Explore careers at EY. Removes the false-positive problem of high-intent users hitting global site search. Confirmed: EY has approved intent CTAs in the hero; the US-precedent flag is cleared. Hero types beyond the current careers set can be enabled with Rob or Marco's approval, so the hero choice is a design decision, not a constraint.", component: "AEM: Hero Banner, image variant" }),
+    b("Market router", "map", { note: "“Looking for roles in your country?” Reads location or URL, offers the local careers site or pre-filtered job search. Stephanie: do not hold other markets' users on global. 195,260 visits to the country selector show users localising by hand. Build path confirmed: no custom code; ships as an Adobe Target experience fragment.", flag: "Open with Marco: one global fragment with auto-updating relative links, or one per location; whether the chosen component type supports auto-updating links, since Product fixes certain components per release; and Target can serve inconsistent experiences. Filtered country job-search URLs are manually maintained, so the link set needs an owner and a review cadence." }),
     b("Intro, the EVP in brief", "textrows", { note: "Short version of why EY for the exploratory visitor. Concrete, not slogans. Conductor scored current copy 37/100.", component: "AEM: Rich text. Content: rewrite." }),
     b("Main entry points", "cards3", { note: "Route by audience: Experienced professionals, Early careers, service line doorway.", component: "AEM: visual link card row. Content: revise labels and destinations." }),
-    b("Search jobs", "search", { note: "Transactional block for people who scrolled past the hero. Same market-aware search as the router.", component: "AEM: job search component" }),
+    b("Search jobs", "search", { note: "Transactional block for people who scrolled past the hero. Same market-aware search as the router, via the same Target experience fragment approach. Filtered country job-search URLs are manually maintained.", component: "AEM: job search component" }),
     b("Why EY, proof block", "text2col", { note: "Two or three EVP proof points with substance: the Personal Fulfilment and Inclusive Culture gaps from the Barometer. Written to survive AI extraction.", component: "AEM: feature / promotional banner. Content: new." }),
     b("People stories", "people", { note: "Real named people, the evidence layer. Currently the weakest content on the site.", component: "AEM: editorial card row. Content: new, with Employer Brand." }),
     b("Talent Community sign-up", "form", { note: "Capture path for no-match visitors. Second most engaged in-page action, 49,703 clicks. Keep both variants.", component: "AEM: Promotional Banner. Content: keep, sharpen." }),
@@ -37,7 +37,7 @@ const jobsearch = page("Job search", home.id, 0,
   [
     header(), nav(),
     b("Hero, slim", "hero", { note: "Title plus search. No storytelling here." }),
-    b("Market-aware job search", "search", { note: "Same component as home.", flag: "Custom, pending EY answer on code freedom." }),
+    b("Market-aware job search", "search", { note: "Same component as home. Target experience fragment, no custom code.", flag: "Same open Marco question as the home router: one global fragment or one per location; Target consistency." }),
     b("Experienced professionals route", "cta", { note: "50% of Job search dropdown clicks. Keep, 8,209 clicks today.", component: "AEM: Promotional Banner" }),
     b("Early careers route", "cta", { note: "29% of dropdown clicks. Keep, 4,862 clicks.", component: "AEM: Promotional Banner" }),
     b("Service line roles", "carousel", { note: "Keep, revise.", component: "AEM: Carousel" }),
@@ -66,7 +66,7 @@ const slTemplate = page("Service line template", wycdh.id, 0,
     b("The work, named examples", "text2col", { note: "Parthenon model: its Strategy Consulting link takes 39% of page clicks." }),
     b("Role family links", "links", { component: "AEM: Visual Link" }),
     b("Specialisms", "accordion", { note: "As on Consulting today.", component: "AEM: Accordion" }),
-    b("Find jobs, pre-filtered", "search", { flag: "Market-aware filter, custom, pending EY." }),
+    b("Find jobs, pre-filtered", "search", { flag: "Filtered job-search URLs are feasible but manually maintained; the per-service-line link set needs an owner." }),
     footer(),
   ]);
 
