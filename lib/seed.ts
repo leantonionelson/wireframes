@@ -1,4 +1,4 @@
-import type { Doc, Page, Block, GlyphId, ColorRole, Persona, Journey } from "./model";
+import { SCHEMA_VERSION, type Doc, type Page, type Block, type GlyphId, type ColorRole, type Persona, type Journey } from "./model";
 
 // Seed: EY Global Careers, from the Tonic build sheet (July 2026 analysis).
 let n = 0;
@@ -178,6 +178,7 @@ export function seedDoc(): Doc {
   return {
     id: "ey-global-careers",
     name: "EY, Global Careers website",
+    schemaVersion: SCHEMA_VERSION,
     rev: 1,
     updatedAt: Date.now(),
     updatedBy: "seed",

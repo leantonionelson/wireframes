@@ -97,6 +97,9 @@ export interface Journey {
 export interface Doc {
   id: string;
   name: string;
+  // Document shape version; absent means v0 (pre-personas). Bump SCHEMA_VERSION
+  // in lib/migrations.ts and add a pure migration for every shape change.
+  schemaVersion?: number;
   rev: number;
   updatedAt: number;
   updatedBy: string;
@@ -117,16 +120,9 @@ export function initialsOf(name: string): string {
 
 export const PERSONA_COLORS = ["#8b5cf6", "#f59e0b", "#0ea5e9", "#10b981", "#ef4444", "#ec4899"];
 
-// Older documents predate personas/journeys; normalise on read.
-export function normDoc(d: Doc): Doc {
-  const journeys = (d.journeys ?? []).map(j => ({
-    ...j,
-    goal: j.goal ?? "", entry: j.entry ?? "", exit: j.exit ?? "",
-    steps: ((j.steps ?? []) as unknown as (string | JourneyStep)[]).map(s =>
-      typeof s === "string" ? { pageId: s, note: "" } : s),
-  }));
-  return { ...d, personas: d.personas ?? [], journeys, notes: d.notes ?? [], members: d.members ?? [] };
-}
+// Boundary normalisation is the migration chain; the versioned functions
+// live in lib/migrations.ts. normDoc stays as the boundary-facing name.
+export { migrateDoc, migrateDoc as normDoc, SCHEMA_VERSION } from "./migrations";
 
 export const COLOR_STYLES: Record<ColorRole, { bg: string; fg: string; label: string }> = {
   header:  { bg: "#a855f7", fg: "#ffffff", label: "Global header" },

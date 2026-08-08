@@ -1,6 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
-import type { Doc } from "./model";
+import { SCHEMA_VERSION, type Doc } from "./model";
 import { seedDoc } from "./seed";
 
 // Storage adapter. With a database URL (env var or Netlify runtime), uses
@@ -36,7 +36,7 @@ export function newProjectDoc(name: string): Doc {
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" +
     Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
   return {
-    id, name, rev: 1, updatedAt: Date.now(), updatedBy: "created",
+    id, name, schemaVersion: SCHEMA_VERSION, rev: 1, updatedAt: Date.now(), updatedBy: "created",
     pages: [{ id: "root", name: "Home", parentId: null, order: 0, note: "", blocks: [
       { id: "b1", label: "Hero", glyph: "hero", color: "content", note: "", component: "", flag: "", comments: [] },
     ] }],

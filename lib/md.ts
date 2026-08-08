@@ -17,7 +17,7 @@
  */
 
 import { GLYPHS, GLYPH_GROUPS } from "./glyphs";
-import { COLOR_STYLES, PERSONA_COLORS, uid,
+import { COLOR_STYLES, PERSONA_COLORS, SCHEMA_VERSION, uid,
   type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona } from "./model";
 
 export const MD_VERSION = "scaffolds-md/1";
@@ -174,7 +174,7 @@ export type Mode = "edit" | "create";
  *  the project is created only when the finished file comes back. */
 export function starterDoc(name: string): Doc {
   return {
-    id: "new", name: name.trim() || "New scaffold", rev: 0, updatedAt: Date.now(), updatedBy: "brief",
+    id: "new", name: name.trim() || "New scaffold", schemaVersion: SCHEMA_VERSION, rev: 0, updatedAt: Date.now(), updatedBy: "brief",
     pages: [{
       id: "home", name: "Home", parentId: null, order: 0,
       note: "Replace this page. What is it for, who arrives on it, and what do they leave with?",
