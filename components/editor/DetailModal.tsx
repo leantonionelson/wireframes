@@ -110,7 +110,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                     first, detail on demand */}
                 <div className="cursor-pointer select-none" style={{ background: c.bg, color: c.fg }}
                      onClick={() => toggleBlock(b.id)}>
-                  <div className="flex items-center gap-2 px-4 pt-2.5">
+                  <div className="flex items-center gap-2 px-5 pt-3.5">
                     {canEdit
                       ? <input className="font-bold text-[14px] bg-transparent outline-none flex-1 min-w-0 cursor-pointer focus:cursor-text" style={{ color: c.fg }}
                                value={b.label} onClick={e => e.stopPropagation()}
@@ -125,7 +125,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                          className="shrink-0 opacity-70" style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 150ms" }}>
                       <path d="M6 9l6 6 6-6" /></svg>
                   </div>
-                  <div className="px-2 pb-2 pt-0.5"><Wireframe ids={b.glyphs} gap={3} accent={c.bg} /></div>
+                  <div className="px-5 pb-4 pt-1.5"><Wireframe ids={b.glyphs} gap={4} /></div>
                 </div>
                 {isOpen && <div className="p-5 pt-3.5">
                 <div className="flex items-center justify-end gap-1.5 mb-1">
@@ -215,7 +215,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                           <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
                         ))}
                       </div>
-                      <Wireframe ids={b.glyphs} gap={2} accent={blockStyle(b, personas).bg} />
+                      <Wireframe ids={b.glyphs} gap={2} />
                     </div>
                   );
                 })}

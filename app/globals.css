@@ -78,19 +78,3 @@ body{font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,sans-se
 /* horizontal tab strips: scroll without a visible bar */
 .no-scrollbar::-webkit-scrollbar{display:none}
 .no-scrollbar{scrollbar-width:none}
-
-/* ---------- wireframe palette ----------
-   Glyphs are drawn on a paper panel inside the block, so they read as an
-   actual wireframe rather than a line drawing on a colour chip. Neutrals
-   carry the structure; --wire-accent is set per block to its intent colour
-   and marks the things a visitor acts on. */
-:root[data-theme="light"], :root{
-  --wire-paper:#ffffff; --wire-edge:rgba(15,23,42,.10);
-  --wire-strong:rgba(15,23,42,.52); --wire-mid:rgba(15,23,42,.28);
-  --wire-soft:rgba(15,23,42,.11); --wire-faint:rgba(15,23,42,.06);
-}
-:root[data-theme="dark"]{
-  --wire-paper:#1b2334; --wire-edge:rgba(226,232,240,.13);
-  --wire-strong:rgba(226,232,240,.50); --wire-mid:rgba(226,232,240,.27);
-  --wire-soft:rgba(226,232,240,.12); --wire-faint:rgba(226,232,240,.07);
-}

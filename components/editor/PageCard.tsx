@@ -24,7 +24,7 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
                    onFocus={() => setSel({ pageId: page.id })} onClick={e => e.stopPropagation()} />
           : <div className="w-full text-center font-bold text-[12.5px] text-[var(--accent)] truncate">{page.name}</div>}
       </div>
-      <div className="p-1.5 pt-1 flex flex-col gap-1">
+      <div className="p-1.5 pt-1 flex flex-col gap-1.5">
         {page.blocks.map(b => {
           const c = blockStyle(b, personas);
           const on = sel?.pageId === page.id && sel?.blockId === b.id;
@@ -36,7 +36,7 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
                  className={`blk rounded-md overflow-hidden cursor-pointer ${on ? "ring-2 ring-[var(--accent)]" : ""}`}
                  style={{ background: c.bg, color: c.fg }}
                  onClick={e => { e.stopPropagation(); setSel({ pageId: page.id, blockId: b.id }); }}>
-              <div className="flex items-center gap-1 text-[10px] font-semibold leading-tight px-1.5 py-[3px]">
+              <div className="flex items-center gap-1 text-[10px] font-semibold leading-tight px-2 pt-1.5 pb-1">
                 <span className="truncate">{b.label}</span>
                 {c.extra.map((col, i) => (
                   <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
@@ -44,7 +44,7 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
                 {b.flag && <span title={b.flag} className="ml-auto text-[9px] bg-red-600 text-white rounded px-1">!</span>}
                 {b.comments.length > 0 && <span className="text-[9px] bg-white/25 rounded px-1">{b.comments.length}</span>}
               </div>
-              <div className="px-[3px] pb-[3px]"><Wireframe ids={b.glyphs} gap={2} accent={c.bg} /></div>
+              <div className="px-2 pb-1.5"><Wireframe ids={b.glyphs} gap={3} /></div>
             </div>
           );
         })}

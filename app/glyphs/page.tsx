@@ -29,7 +29,7 @@ export default function GlyphGallery() {
             <ThemeToggle />
           </div>
         </div>
-        <p className="tk text-[12px] text-[var(--muted)] mb-8">block width {width}px · accent follows the block&apos;s intent colour</p>
+        <p className="tk text-[12px] text-[var(--muted)] mb-8">block width {width}px · drawn in the block&apos;s intent colour</p>
 
         {GLYPH_GROUPS.map(grp => (
           <section key={grp} className="mb-10">
@@ -38,8 +38,8 @@ export default function GlyphGallery() {
               {(Object.keys(GLYPHS) as GlyphId[]).filter(g => GLYPHS[g].group === grp).map(g => (
                 <div key={g} style={{ width }}>
                   <div className="rounded-md overflow-hidden shadow-sm" style={{ background: accent, color: "#fff" }}>
-                    <div className="text-[10px] font-semibold leading-tight px-1.5 py-[3px] truncate">{GLYPHS[g].name}</div>
-                    <div className="px-[3px] pb-[3px]"><Wireframe ids={[g]} accent={accent} /></div>
+                    <div className="text-[10px] font-semibold leading-tight px-2 pt-1.5 pb-1 truncate">{GLYPHS[g].name}</div>
+                    <div className="px-2 pb-1.5"><Wireframe ids={[g]} /></div>
                   </div>
                   <div className="tk text-[10px] text-[var(--muted)] mt-1">{g} · h{GLYPHS[g].h}</div>
                 </div>
@@ -54,8 +54,8 @@ export default function GlyphGallery() {
             {[["hero", "cards3"], ["search", "filters"], ["banner", "herosplit", "logos"], ["article", "related"]].map((ids, i) => (
               <div key={i} style={{ width }}>
                 <div className="rounded-md overflow-hidden shadow-sm" style={{ background: accent, color: "#fff" }}>
-                  <div className="text-[10px] font-semibold leading-tight px-1.5 py-[3px] truncate">{ids.join(" + ")}</div>
-                  <div className="px-[3px] pb-[3px]"><Wireframe ids={ids as GlyphId[]} gap={2} accent={accent} /></div>
+                  <div className="text-[10px] font-semibold leading-tight px-2 pt-1.5 pb-1 truncate">{ids.join(" + ")}</div>
+                  <div className="px-2 pb-1.5"><Wireframe ids={ids as GlyphId[]} gap={3} /></div>
                 </div>
               </div>
             ))}

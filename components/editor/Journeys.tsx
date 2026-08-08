@@ -61,7 +61,7 @@ function MiniStack({ page, personas = [], max }: { page: Page; personas?: Person
           return (
             <div key={b.id} className="rounded overflow-hidden" style={{ background: c.bg, color: c.fg }}>
               <div className="text-[8.5px] font-semibold truncate leading-tight px-1 pt-0.5">{b.label}</div>
-              <div className="px-[2px] pb-[2px]"><Wireframe ids={b.glyphs} gap={1.5} accent={c.bg} /></div>
+              <div className="px-1 pb-0.5"><Wireframe ids={b.glyphs} gap={1.5} /></div>
             </div>
           );
         })}

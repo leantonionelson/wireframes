@@ -1,87 +1,82 @@
 import React from "react";
 import type { GlyphId } from "./model";
 
-/* Wireframe elements.
+/* Wireframe elements: schematic line drawings on the block's own colour.
  *
- * Three rules make these read as a designed wireframe rather than icons:
+ * The idiom is deliberately technical rather than decorative. Everything is
+ * drawn in currentColor - which is the block's foreground on its intent
+ * colour - at three weights, with one uniform stroke and one radius scale:
  *
- * 1. **Every element declares its own height.** A notice bar is 12 units
- *    tall and a hero is 46 on the same 72-wide canvas, so a stack of them
- *    has the rhythm of a real page instead of a row of equal-sized icons.
- * 2. **They are drawn on paper.** Each element paints its own panel in
- *    --wire-paper and sits inside the block's colour, so the colour reads as
- *    the block's intent tag and the drawing reads as the layout.
- * 3. **Weight carries meaning.** Headlines are heavy and short, body text is
- *    light and long, surfaces are faint, and anything a visitor acts on is
- *    painted in --wire-accent (the block's own intent colour). Nothing is a
- *    uniform grey scribble.
+ *   outline   thin stroked box, the container a thing sits in
+ *   line      a run of copy, or a rule
+ *   solid     the few things a visitor acts on, or an active state
  *
- * Canvas is 72 wide with a 5-unit margin, so content lives in x:5..67. */
+ * No fills beyond those, no shadows, no illustration. What varies between
+ * elements is the *arrangement* and the *height*: a notice bar is 10 units
+ * tall on the 72-wide canvas and a hero is 32, so a stack of blocks reads
+ * with the rhythm of a real page instead of as a column of equal icons.
+ *
+ * Content lives in x:5..67. */
 
-const M = 5;              // side margin
+const M = 6;              // side margin
 const W = 72 - M * 2;     // content width, 62
 
 const G = (h: number, children: React.ReactNode) => (
   // No height attribute: with a viewBox and width 100%, the element takes its
-  // intrinsic ratio and the drawing fills it edge to edge.
-  <svg viewBox={`0 0 72 ${h}`} width="100%" fill="none" aria-hidden="true"
+  // intrinsic ratio and the drawing fills the width it is given.
+  <svg viewBox={`0 0 72 ${h}`} width="100%" fill="none" stroke="currentColor"
+       strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
        style={{ display: "block", height: "auto" }}>
-    <rect x="0" y="0" width="72" height={h} rx="3" fill="var(--wire-paper)" />
-    <rect x="0.4" y="0.4" width="71.2" height={h - 0.8} rx="2.8" fill="none" stroke="var(--wire-edge)" strokeWidth="0.8" />
     {children}
   </svg>
 );
 
 /* ---------- primitives ---------- */
 
-/** Faint surface: the area a sub-element occupies. */
-const surface = (x: number, y: number, w: number, h: number, r = 2, fill = "var(--wire-soft)") => (
-  <rect x={x} y={y} width={w} height={h} rx={r} fill={fill} />
+/** Stroked container: a card, a field, a region. */
+const box = (x: number, y: number, w: number, h: number, r = 1.5, o = 0.5) => (
+  <rect x={x} y={y} width={w} height={h} rx={r} opacity={o} />
 );
-/** Outlined surface: a card or panel with an edge rather than a fill. */
-const card = (x: number, y: number, w: number, h: number, r = 2) => (
-  <g>
-    <rect x={x} y={y} width={w} height={h} rx={r} fill="var(--wire-faint)" />
-    <rect x={x + 0.3} y={y + 0.3} width={w - 0.6} height={h - 0.6} rx={r} fill="none" stroke="var(--wire-edge)" strokeWidth="0.7" />
-  </g>
+/** Barely-there surface, for areas that are filled rather than outlined. */
+const soft = (x: number, y: number, w: number, h: number, r = 1.5, o = 0.16) => (
+  <rect x={x} y={y} width={w} height={h} rx={r} fill="currentColor" stroke="none" opacity={o} />
 );
-/** Headline: short and heavy. */
-const head = (x: number, y: number, w: number, h = 2.6) => (
-  <rect x={x} y={y} width={w} height={h} rx={h / 2} fill="var(--wire-strong)" />
+/** Solid mark: buttons, the active tab, the selected state. */
+const solid = (x: number, y: number, w: number, h: number, r = 1.5, o = 0.92) => (
+  <rect x={x} y={y} width={w} height={h} rx={r} fill="currentColor" stroke="none" opacity={o} />
 );
-/** Body copy: long and light. */
-const text = (x: number, y: number, w: number, h = 1.5) => (
-  <rect x={x} y={y} width={w} height={h} rx={h / 2} fill="var(--wire-mid)" />
+/** A line of copy. Heavier and shorter reads as a heading. */
+const line = (x: number, y: number, w: number, o = 0.62, sw = 1.1) => (
+  <line x1={x} y1={y} x2={x + w} y2={y} opacity={o} strokeWidth={sw} />
 );
-/** A run of body lines, last one short like real ragged text. */
-const para = (x: number, y: number, w: number, rows: number, gap = 3.4) => (
+/** A run of copy lines, ragged at the end like real text. */
+const para = (x: number, y: number, w: number, rows: number, gap = 3.8, o = 0.5) => (
   <g>{Array.from({ length: rows }, (_, i) => (
-    <rect key={i} x={x} y={y + i * gap} width={i === rows - 1 ? w * 0.62 : w} height="1.5" rx="0.75" fill="var(--wire-mid)" />
+    <line key={i} x1={x} y1={y + i * gap} x2={x + (i === rows - 1 ? w * 0.6 : w)} y2={y + i * gap}
+          opacity={o} strokeWidth="1.1" />
   ))}</g>
 );
-/** Something a visitor acts on: painted in the block's intent colour. */
-const action = (x: number, y: number, w: number, h: number, r = 99) => (
-  <rect x={x} y={y} width={w} height={h} rx={r === 99 ? h / 2 : r} fill="var(--wire-accent, var(--wire-strong))" />
+const dot = (cx: number, cy: number, r: number, o = 0.8) => (
+  <circle cx={cx} cy={cy} r={r} fill="currentColor" stroke="none" opacity={o} />
 );
-/** Image placeholder: a real picture mark, not a grey box. */
-const img = (x: number, y: number, w: number, h: number, r = 2) => (
+const ring = (cx: number, cy: number, r: number, o = 0.5) => <circle cx={cx} cy={cy} r={r} opacity={o} />;
+/** Picture mark: a horizon inside a frame, drawn not filled. */
+const pic = (x: number, y: number, w: number, h: number, r = 1.5) => (
   <g>
-    <rect x={x} y={y} width={w} height={h} rx={r} fill="var(--wire-soft)" />
-    <circle cx={x + w * 0.28} cy={y + h * 0.32} r={Math.min(w, h) * 0.09} fill="var(--wire-mid)" />
-    <path d={`M${x + w * 0.08} ${y + h * 0.86} L${x + w * 0.36} ${y + h * 0.48} L${x + w * 0.56} ${y + h * 0.68} L${x + w * 0.72} ${y + h * 0.55} L${x + w * 0.94} ${y + h * 0.86} Z`}
-          fill="var(--wire-mid)" opacity="0.85" />
+    {box(x, y, w, h, r, 0.42)}
+    <circle cx={x + w * 0.26} cy={y + h * 0.3} r={Math.min(w, h) * 0.08} opacity="0.55" />
+    <path d={`M${x + w * 0.1} ${y + h * 0.8} L${x + w * 0.36} ${y + h * 0.5} L${x + w * 0.55} ${y + h * 0.66} L${x + w * 0.7} ${y + h * 0.54} L${x + w * 0.9} ${y + h * 0.8}`}
+          opacity="0.55" />
   </g>
 );
-const avatar = (cx: number, cy: number, r: number) => (
-  <g>
-    <circle cx={cx} cy={cy} r={r} fill="var(--wire-soft)" />
-    <circle cx={cx} cy={cy - r * 0.28} r={r * 0.36} fill="var(--wire-mid)" />
-    <path d={`M${cx - r * 0.62} ${cy + r * 0.78} a${r * 0.62} ${r * 0.55} 0 0 1 ${r * 1.24} 0 Z`} fill="var(--wire-mid)" />
-  </g>
+const chevL = (x: number, y: number, s = 1.8, o = 0.6) => (
+  <path d={`M${x + s} ${y - s} L${x} ${y} L${x + s} ${y + s}`} opacity={o} />
 );
-const icon = (cx: number, cy: number, r: number) => <circle cx={cx} cy={cy} r={r} fill="var(--wire-mid)" />;
-const rule = (y: number, x1 = M, x2 = 72 - M) => (
-  <rect x={x1} y={y} width={x2 - x1} height="0.6" fill="var(--wire-edge)" />
+const chevR = (x: number, y: number, s = 1.8, o = 0.6) => (
+  <path d={`M${x} ${y - s} L${x + s} ${y} L${x} ${y + s}`} opacity={o} />
+);
+const chevD = (x: number, y: number, s = 1.6, o = 0.7) => (
+  <path d={`M${x - s} ${y - s * 0.6} L${x} ${y + s * 0.6} L${x + s} ${y - s * 0.6}`} opacity={o} />
 );
 
 type Group = "Structure" | "Text" | "Media" | "Collections" | "Interactive" | "Wayfinding";
@@ -89,7 +84,7 @@ type Entry = { name: string; group: Group; h: number; el: React.ReactNode };
 
 export const GLYPH_GROUPS: Group[] = ["Structure", "Text", "Media", "Collections", "Interactive", "Wayfinding"];
 
-/** Column x positions for an n-across grid inside the content width. */
+/** Column geometry for an n-across grid inside the content width. */
 const cols = (n: number, gap = 2.5) => {
   const w = (W - gap * (n - 1)) / n;
   return { w, x: (i: number) => M + i * (w + gap) };
@@ -97,370 +92,371 @@ const cols = (n: number, gap = 2.5) => {
 
 export const GLYPHS: Record<GlyphId, Entry> = {
   /* ---------------- Structure ---------------- */
-  hero: { name: "Hero", group: "Structure", h: 46, el: G(46, <>
-    {surface(0, 0, 72, 46, 3, "var(--wire-faint)")}
-    {head(M, 12, 40, 3.4)}{head(M, 17.5, 28, 3.4)}
-    {para(M, 25, 44, 2)}
-    {action(M, 34, 20, 6)}
-    <rect x={M + 23} y="34" width="16" height="6" rx="3" fill="none" stroke="var(--wire-mid)" strokeWidth="0.8" />
-  </>) },
-  herosplit: { name: "Hero, split", group: "Structure", h: 46, el: G(46, <>
-    {head(M, 12, 28, 3.4)}{head(M, 17.5, 20, 3.4)}
-    {para(M, 25, 30, 2)}
-    {action(M, 34, 18, 6)}
-    {img(40, 7, 27, 32, 2.5)}
-  </>) },
-  banner: { name: "Notice bar", group: "Structure", h: 12, el: G(12, <>
-    {surface(0, 0, 72, 12, 3, "var(--wire-faint)")}
-    {icon(M + 3, 6, 2.2)}
-    {text(M + 8, 5.2, 38)}
-    <path d="M63 4.2l3.6 3.6M66.6 4.2l-3.6 3.6" stroke="var(--wire-mid)" strokeWidth="1" strokeLinecap="round" />
-  </>) },
-  tabs: { name: "Tabs", group: "Structure", h: 34, el: G(34, <>
-    {action(M, 5, 16, 5, 2)}
-    <rect x={M + 18} y="5" width="16" height="5" rx="2" fill="var(--wire-soft)" />
-    <rect x={M + 36} y="5" width="16" height="5" rx="2" fill="var(--wire-soft)" />
-    {rule(11.5)}
-    {head(M, 16, 26)}{para(M, 22, W, 3)}
-  </>) },
-  sidebar: { name: "Content + sidebar", group: "Structure", h: 42, el: G(42, <>
-    {card(M, 6, 18, 30)}
-    {text(M + 3, 11, 12)}{text(M + 3, 16, 10)}{text(M + 3, 21, 12)}{text(M + 3, 26, 9)}
-    {head(27, 8, 30)}{para(27, 15, 40, 5)}
-  </>) },
-  breadcrumb: { name: "Breadcrumb", group: "Structure", h: 10, el: G(10, <>
-    {text(M, 4.2, 10)}
-    <path d="M18 3.4l1.8 1.6-1.8 1.6" stroke="var(--wire-edge)" strokeWidth="0.9" strokeLinecap="round" fill="none" />
-    {text(22, 4.2, 12)}
-    <path d="M37 3.4l1.8 1.6-1.8 1.6" stroke="var(--wire-edge)" strokeWidth="0.9" strokeLinecap="round" fill="none" />
-    {head(41, 3.7, 16, 2.2)}
-  </>) },
-  footercols: { name: "Footer columns", group: "Structure", h: 34, el: G(34, <>
+  hero: { name: "Hero", group: "Structure", h: 38, el: G(38, <g transform="translate(0 3)">
+    {line(M, 9, 40, 0.9, 2.4)}
+    {line(M, 14, 28, 0.9, 2.4)}
+    {para(M, 19, 42, 2, 3.2, 0.45)}
+    {solid(M, 25, 17, 4.5, 2.25)}
+  </g>) },
+  herosplit: { name: "Hero, split", group: "Structure", h: 36, el: G(36, <g transform="translate(0 3)">
+    {line(M, 8, 26, 0.9, 2.4)}
+    {line(M, 13, 18, 0.9, 2.4)}
+    {para(M, 18, 27, 2, 3.2, 0.45)}
+    {solid(M, 24, 15, 4.2, 2.1)}
+    {pic(39, 4, 28, 22, 2)}
+  </g>) },
+  banner: { name: "Notice bar", group: "Structure", h: 12, el: G(12, <g transform="translate(0 1)">
+    {soft(M, 2, W, 6, 3)}
+    {dot(M + 3.5, 5, 1.4, 0.75)}
+    {line(M + 8, 5, 34, 0.6)}
+    <path d="M62 3.4l3.2 3.2M65.2 3.4l-3.2 3.2" opacity="0.6" />
+  </g>) },
+  tabs: { name: "Tabs", group: "Structure", h: 31, el: G(31, <g transform="translate(0 2.5)">
+    {solid(M, 3, 15, 4.5, 2.25, 0.85)}
+    {box(M + 17, 3, 15, 4.5, 2.25, 0.45)}
+    {box(M + 34, 3, 15, 4.5, 2.25, 0.45)}
+    {line(M, 11, W, 0.28)}
+    {line(M, 15, 26, 0.75, 1.8)}
+    {para(M, 19.5, W, 2, 3.2, 0.45)}
+  </g>) },
+  sidebar: { name: "Content + sidebar", group: "Structure", h: 35, el: G(35, <g transform="translate(0 2.5)">
+    {box(M, 3, 17, 24, 2, 0.4)}
+    {line(M + 3, 8, 11, 0.5)}{line(M + 3, 12, 9, 0.5)}{line(M + 3, 16, 11, 0.5)}{line(M + 3, 20, 8, 0.5)}
+    {line(26, 5, 28, 0.85, 2.2)}
+    {para(26, 11, 40, 5, 3.4, 0.45)}
+  </g>) },
+  breadcrumb: { name: "Breadcrumb", group: "Structure", h: 10, el: G(10, <g transform="translate(0 1)">
+    {line(M, 4, 9, 0.45)}
+    {chevR(17, 4, 1.4, 0.45)}
+    {line(21, 4, 11, 0.45)}
+    {chevR(35, 4, 1.4, 0.45)}
+    {line(39, 4, 15, 0.85, 1.6)}
+  </g>) },
+  footercols: { name: "Footer columns", group: "Structure", h: 31, el: G(31, <g transform="translate(0 2.5)">
     {[0, 1, 2, 3].map(i => {
       const c = cols(4, 3);
       return (
         <g key={i}>
-          {head(c.x(i), 7, c.w * 0.72, 2)}
-          {text(c.x(i), 13, c.w * 0.9)}{text(c.x(i), 17.5, c.w * 0.7)}{text(c.x(i), 22, c.w * 0.85)}
+          {line(c.x(i), 5, c.w * 0.7, 0.8, 1.6)}
+          {line(c.x(i), 10, c.w * 0.9, 0.42)}{line(c.x(i), 14, c.w * 0.65, 0.42)}{line(c.x(i), 18, c.w * 0.8, 0.42)}
         </g>
       );
     })}
-    {rule(28)}
-    {text(M, 30, 24)}
-  </>) },
+    {line(M, 23, W, 0.25)}
+  </g>) },
 
   /* ---------------- Text ---------------- */
-  textrows: { name: "Text rows", group: "Text", h: 24, el: G(24, <>
-    {para(M, 6, W, 5)}
-  </>) },
-  text2col: { name: "Two column text", group: "Text", h: 28, el: G(28, <>
-    {para(M, 7, 28, 5)}
-    {para(39, 7, 28, 5)}
-  </>) },
-  article: { name: "Article", group: "Text", h: 38, el: G(38, <>
-    {head(M, 6, 42, 3.2)}
-    {text(M, 13, 24)}
-    {rule(18)}
-    {para(M, 22, W, 4)}
-  </>) },
-  quote: { name: "Quote", group: "Text", h: 28, el: G(28, <>
-    <path d="M9 8c-2.6.9-4 2.7-4 5.3h4.2v4.6H4.1v-4.6C4.1 10 5.9 8 9 7z" fill="var(--wire-accent, var(--wire-mid))" opacity="0.5" />
-    {head(16, 9, 40, 2.4)}{head(16, 14, 32, 2.4)}
-    {text(16, 20, 20)}
-  </>) },
-  testimonial: { name: "Testimonial", group: "Text", h: 32, el: G(32, <>
-    {card(M, 5, W, 22)}
-    {avatar(14, 14, 4.4)}
-    {para(22, 10, 40, 3)}
-    {text(22, 22, 16)}
-  </>) },
+  textrows: { name: "Text rows", group: "Text", h: 26, el: G(26, <g transform="translate(0 3)">
+    {para(M, 4, W, 5, 3.2, 0.55)}
+  </g>) },
+  text2col: { name: "Two column text", group: "Text", h: 28, el: G(28, <g transform="translate(0 3)">
+    {para(M, 4, 28, 5, 3.4, 0.55)}
+    {para(39, 4, 28, 5, 3.4, 0.55)}
+  </g>) },
+  article: { name: "Article", group: "Text", h: 34, el: G(34, <g transform="translate(0 3)">
+    {line(M, 5, 42, 0.9, 2.4)}
+    {line(M, 10, 22, 0.45)}
+    {line(M, 14, W, 0.25)}
+    {para(M, 18, W, 3, 3.2, 0.5)}
+  </g>) },
+  quote: { name: "Quote", group: "Text", h: 24, el: G(24, <g transform="translate(0 2)">
+    <path d="M8.4 5c-2.2.8-3.4 2.3-3.4 4.5h3.6v3.9H4.6V9.5C4.6 7 6.1 5.4 8.4 4.4z" fill="currentColor" stroke="none" opacity="0.4" />
+    {line(15, 7, 46, 0.8, 1.8)}
+    {line(15, 11.5, 38, 0.8, 1.8)}
+    {line(15, 16, 20, 0.4)}
+  </g>) },
+  testimonial: { name: "Testimonial", group: "Text", h: 28, el: G(28, <g transform="translate(0 2)">
+    {box(M, 3, W, 18, 2, 0.4)}
+    {ring(13, 10, 3.6, 0.55)}
+    {para(20, 8, 40, 2, 3.2, 0.5)}
+    {line(20, 17, 15, 0.4)}
+  </g>) },
 
   /* ---------------- Media ---------------- */
-  image: { name: "Image", group: "Media", h: 40, el: G(40, <>
-    {img(M, 5, W, 26, 2.5)}
-    {text(M, 34, 30)}
-  </>) },
-  video: { name: "Video", group: "Media", h: 40, el: G(40, <>
-    {surface(M, 5, W, 30, 2.5)}
-    <circle cx="36" cy="20" r="6" fill="var(--wire-accent, var(--wire-mid))" opacity="0.85" />
-    <path d="M34.2 16.8l4.6 3.2-4.6 3.2z" fill="var(--wire-paper)" />
-  </>) },
-  gallery: { name: "Gallery", group: "Media", h: 36, el: G(36, <>
-    {img(M, 5, 30, 26, 2.5)}
-    {img(38, 5, 29, 12, 2.5)}
-    {img(38, 19, 29, 12, 2.5)}
-  </>) },
-  logos: { name: "Logo strip", group: "Media", h: 16, el: G(16, <>
-    {text(M, 3, 20)}
+  image: { name: "Image", group: "Media", h: 32, el: G(32, <g transform="translate(0 2)">
+    {pic(M, 3, W, 18, 2)}
+    {line(M, 25, 28, 0.4)}
+  </g>) },
+  video: { name: "Video", group: "Media", h: 32, el: G(32, <g transform="translate(0 2)">
+    {box(M, 3, W, 22, 2, 0.42)}
+    {ring(36, 14, 5, 0.6)}
+    <path d="M34.4 11.4l3.8 2.6-3.8 2.6z" fill="currentColor" stroke="none" opacity="0.85" />
+  </g>) },
+  gallery: { name: "Gallery", group: "Media", h: 30, el: G(30, <g transform="translate(0 2)">
+    {pic(M, 3, 29, 20, 2)}
+    {pic(37, 3, 30, 9, 2)}
+    {pic(37, 14, 30, 9, 2)}
+  </g>) },
+  logos: { name: "Logo strip", group: "Media", h: 15, el: G(15, <g transform="translate(0 1.5)">
     {[0, 1, 2, 3, 4].map(i => {
       const c = cols(5, 3);
-      return <rect key={i} x={c.x(i)} y="8" width={c.w} height="5" rx="1.5" fill="var(--wire-soft)" />;
+      return <rect key={i} x={c.x(i)} y="4" width={c.w} height="4.5" rx="1.5" opacity="0.42" />;
     })}
-  </>) },
-  split: { name: "Media + text", group: "Media", h: 38, el: G(38, <>
-    {img(M, 5, 28, 28, 2.5)}
-    {head(38, 8, 26, 3)}
-    {para(38, 15, 28, 3)}
-    {action(38, 26, 16, 5.5)}
-  </>) },
+  </g>) },
+  split: { name: "Media + text", group: "Media", h: 32, el: G(32, <g transform="translate(0 2)">
+    {pic(M, 3, 27, 22, 2)}
+    {line(37, 6, 26, 0.85, 2.2)}
+    {para(37, 12, 28, 2, 3.2, 0.45)}
+    {solid(37, 20, 15, 4.2, 2.1)}
+  </g>) },
 
   /* ---------------- Collections ---------------- */
-  cards3: { name: "Three cards", group: "Collections", h: 38, el: G(38, <>
-    {head(M, 5, 26, 2.6)}
+  cards3: { name: "Three cards", group: "Collections", h: 33, el: G(33, <g transform="translate(0 2.5)">
+    {line(M, 4, 24, 0.8, 1.8)}
     {[0, 1, 2].map(i => {
       const c = cols(3);
       return (
         <g key={i}>
-          {card(c.x(i), 11, c.w, 22)}
-          {img(c.x(i) + 1.5, 12.5, c.w - 3, 9, 1.5)}
-          {text(c.x(i) + 1.5, 24, c.w - 6)}{text(c.x(i) + 1.5, 27.5, c.w - 10)}
+          {box(c.x(i), 9, c.w, 16, 2, 0.45)}
+          {line(c.x(i) + 2, 19, c.w - 4, 0.45)}
+          {line(c.x(i) + 2, 22, c.w - 8, 0.35)}
         </g>
       );
     })}
-  </>) },
-  cards4: { name: "Four cards", group: "Collections", h: 34, el: G(34, <>
+  </g>) },
+  cards4: { name: "Four cards", group: "Collections", h: 28, el: G(28, <g transform="translate(0 2)">
     {[0, 1, 2, 3].map(i => {
-      const c = cols(4);
+      const c = cols(4, 2);
       return (
         <g key={i}>
-          {card(c.x(i), 5, c.w, 24)}
-          {img(c.x(i) + 1.2, 6.2, c.w - 2.4, 10, 1.5)}
-          {text(c.x(i) + 1.2, 19, c.w - 4)}{text(c.x(i) + 1.2, 22.5, c.w - 7)}
+          {box(c.x(i), 3, c.w, 18, 2, 0.45)}
+          {line(c.x(i) + 1.5, 15, c.w - 3, 0.45)}
+          {line(c.x(i) + 1.5, 18, c.w - 6, 0.35)}
         </g>
       );
     })}
-  </>) },
-  grid2x2: { name: "Feature grid", group: "Collections", h: 36, el: G(36, <>
+  </g>) },
+  grid2x2: { name: "Feature grid", group: "Collections", h: 31, el: G(31, <g transform="translate(0 2.5)">
     {[0, 1].map(r => [0, 1].map(i => {
       const c = cols(2, 3);
-      const y = 5 + r * 14.5;
+      const y = 3 + r * 11;
       return (
         <g key={`${r}-${i}`}>
-          {card(c.x(i), y, c.w, 12.5)}
-          {icon(c.x(i) + 4.5, y + 4.5, 2.2)}
-          {text(c.x(i) + 9, y + 3.6, c.w - 13)}{text(c.x(i) + 9, y + 7.4, c.w - 18)}
+          {box(c.x(i), y, c.w, 9, 2, 0.42)}
+          {dot(c.x(i) + 4, y + 4.5, 1.6, 0.7)}
+          {line(c.x(i) + 8, y + 3.4, c.w - 12, 0.5)}
+          {line(c.x(i) + 8, y + 6.4, c.w - 17, 0.35)}
         </g>
       );
     }))}
-  </>) },
-  people: { name: "People cards", group: "Collections", h: 40, el: G(40, <>
-    {head(M, 5, 24, 2.6)}
+  </g>) },
+  people: { name: "People cards", group: "Collections", h: 32, el: G(32, <g transform="translate(0 2)">
     {[0, 1, 2].map(i => {
       const c = cols(3);
       return (
         <g key={i}>
-          {card(c.x(i), 11, c.w, 24)}
-          {avatar(c.x(i) + c.w / 2, 19, 4.6)}
-          {text(c.x(i) + 2.5, 27, c.w - 5)}{text(c.x(i) + 4.5, 30.5, c.w - 9)}
+          {box(c.x(i), 3, c.w, 21, 2, 0.45)}
+          {ring(c.x(i) + c.w / 2, 10, 3.8, 0.6)}
+          {line(c.x(i) + 2.5, 17.5, c.w - 5, 0.5)}
+          {line(c.x(i) + 4.5, 20.5, c.w - 9, 0.35)}
         </g>
       );
     })}
-  </>) },
-  carousel: { name: "Carousel", group: "Collections", h: 36, el: G(36, <>
-    <circle cx="5.5" cy="18" r="3.4" fill="var(--wire-soft)" />
-    <path d="M6.6 16.3l-1.7 1.7 1.7 1.7" stroke="var(--wire-mid)" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-    {card(11, 5, 24, 22)}{img(12.5, 6.5, 21, 12, 1.5)}{text(12.5, 21, 16)}
-    {card(37, 5, 24, 22)}{img(38.5, 6.5, 21, 12, 1.5)}{text(38.5, 21, 16)}
-    <circle cx="66.5" cy="18" r="3.4" fill="var(--wire-soft)" />
-    <path d="M65.4 16.3l1.7 1.7-1.7 1.7" stroke="var(--wire-mid)" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-    <g>{[0, 1, 2].map(i => <circle key={i} cx={33 + i * 3.2} cy="31.5" r="1" fill={i === 0 ? "var(--wire-accent, var(--wire-strong))" : "var(--wire-soft)"} />)}</g>
-  </>) },
-  related: { name: "Related content", group: "Collections", h: 36, el: G(36, <>
-    {head(M, 5, 22, 2.4)}
+  </g>) },
+  carousel: { name: "Carousel", group: "Collections", h: 30, el: G(30, <g transform="translate(0 2)">
+    {chevL(4, 12, 2, 0.6)}
+    {box(10, 3, 24, 17, 2, 0.45)}{line(12.5, 15, 17, 0.42)}
+    {box(37, 3, 24, 17, 2, 0.45)}{line(39.5, 15, 17, 0.42)}
+    {chevR(66, 12, 2, 0.6)}
+    {[0, 1, 2].map(i => <circle key={i} cx={33 + i * 3} cy="23" r="0.9" fill="currentColor" stroke="none" opacity={i === 0 ? 0.9 : 0.3} />)}
+  </g>) },
+  related: { name: "Related content", group: "Collections", h: 31, el: G(31, <g transform="translate(0 2.5)">
+    {line(M, 4, 22, 0.8, 1.8)}
     {[0, 1, 2].map(i => {
       const c = cols(3);
       return (
         <g key={i}>
-          {img(c.x(i), 11, c.w, 11, 2)}
-          {text(c.x(i), 24.5, c.w * 0.9)}{text(c.x(i), 28.5, c.w * 0.6)}
+          {box(c.x(i), 9, c.w, 9, 2, 0.42)}
+          {line(c.x(i), 21, c.w * 0.9, 0.45)}
+          {line(c.x(i), 24, c.w * 0.6, 0.3)}
         </g>
       );
     })}
-  </>) },
-  listrows: { name: "Listing rows", group: "Collections", h: 38, el: G(38, <>
+  </g>) },
+  listrows: { name: "Listing rows", group: "Collections", h: 33, el: G(33, <g transform="translate(0 2.5)">
     {[0, 1, 2].map(i => {
-      const y = 5 + i * 10.5;
+      const y = 3 + i * 8.4;
       return (
         <g key={i}>
-          {card(M, y, W, 9)}
-          {img(M + 1.5, y + 1.2, 9, 6.6, 1.2)}
-          {head(M + 13, y + 2, 24, 2)}
-          {text(M + 13, y + 5.6, 32)}
-          {action(56, y + 2.6, 9, 3.8)}
+          {box(M, y, W, 7, 1.5, 0.4)}
+          {soft(M + 1.5, y + 1.2, 7, 4.6, 1)}
+          {line(M + 11, y + 2.6, 22, 0.6)}
+          {line(M + 11, y + 5, 30, 0.35)}
+          {solid(56, y + 2, 9, 3.2, 1.6, 0.85)}
         </g>
       );
     })}
-  </>) },
-  table: { name: "Table", group: "Collections", h: 32, el: G(32, <>
-    <rect x={M} y="5" width={W} height="6" rx="1.5" fill="var(--wire-soft)" />
-    {[0, 1, 2].map(i => <rect key={i} x={M + 2 + i * 20} y="7.2" width="13" height="1.6" rx="0.8" fill="var(--wire-strong)" />)}
-    {[0, 1, 2].map(r => (
+  </g>) },
+  table: { name: "Table", group: "Collections", h: 30, el: G(30, <g transform="translate(0 2)">
+    {soft(M, 3, W, 5, 1.5, 0.2)}
+    {[0, 1, 2].map(i => <line key={i} x1={M + 2 + i * 20} y1="5.5" x2={M + 14 + i * 20} y2="5.5" opacity="0.8" strokeWidth="1.4" />)}
+    {[0, 1, 2, 3].map(r => (
       <g key={r}>
-        {rule(12 + r * 6.5, M, 72 - M)}
-        {[0, 1, 2].map(i => <rect key={i} x={M + 2 + i * 20} y={14 + r * 6.5} width={i === 0 ? 15 : 11} height="1.5" rx="0.75" fill="var(--wire-mid)" />)}
+        {[0, 1, 2].map(i => <line key={i} x1={M + 2 + i * 20} y1={11.5 + r * 4.2} x2={M + (i === 0 ? 16 : 12) + i * 20} y2={11.5 + r * 4.2} opacity="0.4" />)}
       </g>
     ))}
-    {rule(31.5, M, 72 - M)}
-  </>) },
-  pricing: { name: "Pricing", group: "Collections", h: 42, el: G(42, <>
+    <g opacity="0.22">
+      <line x1="24" y1="3" x2="24" y2="25" /><line x1="44" y1="3" x2="44" y2="25" />
+    </g>
+  </g>) },
+  pricing: { name: "Pricing", group: "Collections", h: 34, el: G(34, <g transform="translate(0 2)">
     {[0, 1, 2].map(i => {
       const c = cols(3);
       const mid = i === 1;
-      const y = mid ? 4 : 7;
-      const h = mid ? 32 : 26;
+      const y = mid ? 2 : 5;
+      const h = mid ? 25 : 20;
       return (
         <g key={i}>
-          {card(c.x(i), y, c.w, h, 2.5)}
-          {text(c.x(i) + 3, y + 3.5, c.w - 10)}
-          {head(c.x(i) + 3, y + 8, c.w - 8, 3.4)}
-          {text(c.x(i) + 3, y + 15, c.w - 6)}{text(c.x(i) + 3, y + 18.5, c.w - 9)}
-          {mid ? action(c.x(i) + 3, y + 24, c.w - 6, 4.5)
-               : <rect x={c.x(i) + 3} y={y + 20} width={c.w - 6} height="4" rx="2" fill="none" stroke="var(--wire-mid)" strokeWidth="0.8" />}
+          {box(c.x(i), y, c.w, h, 2, mid ? 0.7 : 0.4)}
+          {line(c.x(i) + 2.5, y + 4, c.w - 9, 0.4)}
+          {line(c.x(i) + 2.5, y + 8.5, c.w - 6, 0.9, 2.4)}
+          {line(c.x(i) + 2.5, y + 13, c.w - 5, 0.35)}
+          {mid ? solid(c.x(i) + 2.5, y + 18, c.w - 5, 4, 2)
+               : box(c.x(i) + 2.5, y + 15, c.w - 5, 3.6, 1.8, 0.45)}
         </g>
       );
     })}
-  </>) },
+  </g>) },
 
   /* ---------------- Interactive ---------------- */
-  search: { name: "Search", group: "Interactive", h: 16, el: G(16, <>
-    <rect x={M} y="4" width="50" height="8" rx="4" fill="var(--wire-soft)" />
-    <circle cx="11" cy="8" r="2.2" fill="none" stroke="var(--wire-mid)" strokeWidth="0.9" />
-    <path d="M12.7 9.7l1.6 1.6" stroke="var(--wire-mid)" strokeWidth="0.9" strokeLinecap="round" />
-    {text(17, 7.2, 24)}
-    {action(57, 4, 10, 8, 4)}
-  </>) },
-  filters: { name: "Filters + results", group: "Interactive", h: 40, el: G(40, <>
-    {card(M, 5, 18, 30)}
-    {text(M + 2.5, 8, 10)}
+  search: { name: "Search", group: "Interactive", h: 15, el: G(15, <g transform="translate(0 1.5)">
+    {box(M, 3, 48, 7, 3.5, 0.5)}
+    {ring(10.5, 6.5, 2, 0.6)}
+    <path d="M12 8l1.6 1.6" opacity="0.6" />
+    {line(16.5, 6.5, 22, 0.35)}
+    {solid(56, 3, 11, 7, 3.5)}
+  </g>) },
+  filters: { name: "Filters + results", group: "Interactive", h: 35, el: G(35, <g transform="translate(0 2.5)">
+    {box(M, 3, 17, 24, 2, 0.4)}
     {[0, 1, 2, 3].map(i => (
       <g key={i}>
-        <rect x={M + 2.5} y={13 + i * 5.5} width="3" height="3" rx="0.8" fill={i === 0 ? "var(--wire-accent, var(--wire-strong))" : "var(--wire-soft)"} />
-        {text(M + 7.5, 13.7 + i * 5.5, 9)}
+        {i === 0 ? solid(M + 2.5, 6.5 + i * 5.2, 2.8, 2.8, 0.8)
+                 : box(M + 2.5, 6.5 + i * 5.2, 2.8, 2.8, 0.8, 0.5)}
+        {line(M + 7, 8 + i * 5.2, 8.5, 0.45)}
       </g>
     ))}
     {[0, 1, 2].map(i => (
       <g key={i}>
-        {card(27, 5 + i * 10.4, 40, 9)}
-        {head(29, 7.4 + i * 10.4, 20, 2)}
-        {text(29, 11 + i * 10.4, 30)}
+        {box(26, 3 + i * 8.4, 41, 7, 1.5, 0.42)}
+        {line(28.5, 5.4 + i * 8.4, 18, 0.6)}
+        {line(28.5, 7.8 + i * 8.4, 28, 0.35)}
       </g>
     ))}
-  </>) },
-  form: { name: "Form / sign-up", group: "Interactive", h: 40, el: G(40, <>
-    {head(M, 5, 26, 2.6)}
+  </g>) },
+  form: { name: "Form / sign-up", group: "Interactive", h: 35, el: G(35, <g transform="translate(0 2.5)">
     {[0, 1].map(i => (
       <g key={i}>
-        {text(M, 11 + i * 11, 12)}
-        <rect x={M} y={14.5 + i * 11} width="30" height="6.5" rx="2" fill="var(--wire-soft)" />
+        {line(M, 5 + i * 10, 11, 0.4)}
+        {box(M, 7.5 + i * 10, 28, 6, 1.8, 0.5)}
       </g>
     ))}
-    {text(39, 11, 14)}
-    <rect x="39" y="14.5" width="28" height="6.5" rx="2" fill="var(--wire-soft)" />
-    <rect x="39" y="25.5" width="3" height="3" rx="0.8" fill="var(--wire-soft)" />
-    {text(44, 26.2, 22)}
-    {action(39, 31, 20, 6)}
-  </>) },
-  cta: { name: "CTA banner", group: "Interactive", h: 24, el: G(24, <>
-    {surface(0, 0, 72, 24, 3, "var(--wire-faint)")}
-    {head(M, 7, 32, 3)}
-    {text(M, 14, 38)}
-    {action(48, 8.5, 19, 7)}
-  </>) },
-  accordion: { name: "Accordion", group: "Interactive", h: 32, el: G(32, <>
-    <rect x={M} y="5" width={W} height="8" rx="2" fill="var(--wire-soft)" />
-    {head(M + 2.5, 8, 26, 2.2)}
-    <path d="M62 8.4l2 2 2-2" stroke="var(--wire-strong)" strokeWidth="1" fill="none" strokeLinecap="round" />
-    {para(M + 2.5, 15.5, 50, 2)}
-    {rule(23)}
-    <rect x={M} y="25" width={W} height="5" rx="2" fill="var(--wire-faint)" />
-    {text(M + 2.5, 27, 22)}
-  </>) },
-  steps: { name: "Process steps", group: "Interactive", h: 26, el: G(26, <>
-    <rect x="12" y="9.4" width="48" height="1.2" fill="var(--wire-soft)" />
+    {line(38, 5, 13, 0.4)}
+    {box(38, 7.5, 29, 6, 1.8, 0.5)}
+    {box(38, 18, 3, 3, 0.8, 0.5)}
+    {line(43, 19.5, 20, 0.4)}
+    {solid(38, 23, 18, 5, 2.5)}
+  </g>) },
+  cta: { name: "CTA banner", group: "Interactive", h: 22, el: G(22, <g transform="translate(0 2)">
+    {soft(M, 2, W, 14, 2.5, 0.12)}
+    {line(M + 4, 7, 30, 0.85, 2.2)}
+    {line(M + 4, 12, 24, 0.4)}
+    {solid(47, 6, 18, 6, 3)}
+  </g>) },
+  accordion: { name: "Accordion", group: "Interactive", h: 29, el: G(29, <g transform="translate(0 2.5)">
+    {box(M, 3, W, 6.5, 1.8, 0.55)}
+    {line(M + 2.5, 6.2, 24, 0.65)}
+    {chevD(63, 5.6, 1.5, 0.75)}
+    {para(M + 2.5, 13, 46, 2, 3, 0.4)}
+    {box(M, 19, W, 4.5, 1.8, 0.35)}
+    {line(M + 2.5, 21.2, 20, 0.4)}
+  </g>) },
+  steps: { name: "Process steps", group: "Interactive", h: 22, el: G(22, <g transform="translate(0 2)">
+    <line x1="12" y1="7" x2="60" y2="7" opacity="0.25" />
     {[0, 1, 2, 3].map(i => {
       const cx = 12 + i * 16;
       return (
         <g key={i}>
-          <circle cx={cx} cy="10" r="3.6" fill={i === 0 ? "var(--wire-accent, var(--wire-strong))" : "var(--wire-soft)"} />
-          {text(cx - 6, 17, 12)}{text(cx - 4, 20.5, 8)}
+          {i === 0 ? dot(cx, 7, 3, 0.9) : <circle cx={cx} cy="7" r="3" fill="none" opacity="0.45" />}
+          {line(cx - 5.5, 13, 11, 0.4)}
+          {line(cx - 3.5, 16, 7, 0.28)}
         </g>
       );
     })}
-  </>) },
-  toggle: { name: "Toggle / compare", group: "Interactive", h: 18, el: G(18, <>
-    {text(M, 8, 14)}
-    <rect x="26" y="5" width="20" height="8" rx="4" fill="var(--wire-soft)" />
-    {action(27, 6, 8, 6, 3)}
-    {text(50, 8, 17)}
-  </>) },
+  </g>) },
+  toggle: { name: "Toggle / compare", group: "Interactive", h: 15, el: G(15, <g transform="translate(0 1.5)">
+    {line(M, 6, 13, 0.4)}
+    {box(25, 2.5, 21, 7, 3.5, 0.5)}
+    {solid(26, 3.5, 9, 5, 2.5)}
+    {line(50, 6, 17, 0.4)}
+  </g>) },
 
   /* ---------------- Wayfinding ---------------- */
-  links: { name: "Link list", group: "Wayfinding", h: 28, el: G(28, <>
-    {head(M, 5, 20, 2.2)}
+  links: { name: "Link list", group: "Wayfinding", h: 27, el: G(27, <g transform="translate(0 2.5)">
+    {line(M, 4, 20, 0.8, 1.8)}
     {[0, 1, 2, 3].map(i => (
       <g key={i}>
-        <circle cx={M + 1.5} cy={12.5 + i * 4.6} r="1" fill="var(--wire-accent, var(--wire-mid))" />
-        {text(M + 5, 11.8 + i * 4.6, [42, 50, 36, 46][i])}
+        {dot(M + 1, 10 + i * 4, 0.9, 0.8)}
+        {line(M + 4.5, 10 + i * 4, [42, 50, 34, 45][i], 0.45)}
       </g>
     ))}
-  </>) },
-  linker: { name: "Prev / next", group: "Wayfinding", h: 18, el: G(18, <>
-    {card(M, 4, 28, 10)}
-    <path d="M10.4 7.5l-2 2 2 2" stroke="var(--wire-mid)" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-    {text(13, 7, 8)}{text(13, 10.5, 16)}
-    {card(39, 4, 28, 10)}
-    {text(43, 7, 8)}{text(43, 10.5, 16)}
-    <path d="M63.6 7.5l2 2-2 2" stroke="var(--wire-mid)" strokeWidth="0.9" fill="none" strokeLinecap="round" />
-  </>) },
-  map: { name: "Map / locations", group: "Wayfinding", h: 40, el: G(40, <>
-    {surface(M, 5, 40, 30, 2.5)}
-    <path d="M5 20 L20 14 L32 22 L45 15" stroke="var(--wire-edge)" strokeWidth="1" fill="none" />
-    <path d="M5 28 L18 25 L30 31 L45 26" stroke="var(--wire-edge)" strokeWidth="1" fill="none" />
-    <path d="M25 15c2.6 0 4.4 2 4.4 4.3 0 2.6-4.4 6.2-4.4 6.2s-4.4-3.6-4.4-6.2c0-2.3 1.8-4.3 4.4-4.3z" fill="var(--wire-accent, var(--wire-strong))" />
-    <circle cx="25" cy="19.3" r="1.4" fill="var(--wire-paper)" />
+  </g>) },
+  linker: { name: "Prev / next", group: "Wayfinding", h: 17, el: G(17, <g transform="translate(0 1.5)">
+    {box(M, 3, 28, 8, 2, 0.42)}
+    {chevL(8.5, 7, 1.6, 0.6)}
+    {line(13, 5.5, 7, 0.35)}{line(13, 8.5, 15, 0.5)}
+    {box(39, 3, 28, 8, 2, 0.42)}
+    {line(43, 5.5, 7, 0.35)}{line(43, 8.5, 15, 0.5)}
+    {chevR(63.5, 7, 1.6, 0.6)}
+  </g>) },
+  map: { name: "Map / locations", group: "Wayfinding", h: 32, el: G(32, <g transform="translate(0 2)">
+    {box(M, 3, 38, 22, 2, 0.42)}
+    <g opacity="0.28">
+      <path d="M5 13 L18 8 L30 15 L43 9" /><path d="M5 20 L16 17 L28 23 L43 18" />
+    </g>
+    <path d="M23 9c2.3 0 4 1.8 4 3.9 0 2.3-4 5.6-4 5.6s-4-3.3-4-5.6c0-2.1 1.7-3.9 4-3.9z"
+          fill="currentColor" stroke="none" opacity="0.9" />
     {[0, 1, 2].map(i => (
       <g key={i}>
-        {head(48, 7 + i * 10, 14, 2)}
-        {text(48, 11 + i * 10, 19)}{text(48, 14.5 + i * 10, 14)}
+        {line(47, 5 + i * 7.5, 14, 0.6)}
+        {line(47, 8.5 + i * 7.5, 19, 0.35)}
       </g>
     ))}
-  </>) },
-  contact: { name: "Contact details", group: "Wayfinding", h: 30, el: G(30, <>
-    {card(M, 5, 26, 20)}
-    <rect x={M + 4} y="10" width="18" height="11" rx="1.5" fill="var(--wire-soft)" />
-    <path d="M9 10.6l8 5.4 8-5.4" stroke="var(--wire-mid)" strokeWidth="0.9" fill="none" />
+  </g>) },
+  contact: { name: "Contact details", group: "Wayfinding", h: 26, el: G(26, <g transform="translate(0 2)">
+    {box(M, 3, 24, 16, 2, 0.45)}
+    {box(M + 3.5, 7, 17, 10, 1.2, 0.5)}
+    <path d="M8.5 7.5l8.5 5.6 8.5-5.6" opacity="0.5" />
     {[0, 1, 2].map(i => (
       <g key={i}>
-        <circle cx="37" cy={9 + i * 7} r="1.6" fill="var(--wire-accent, var(--wire-mid))" />
-        {text(41, 8.3 + i * 7, [26, 20, 24][i])}
+        {dot(35, 6 + i * 5.5, 1.3, 0.8)}
+        {line(38.5, 6 + i * 5.5, [26, 20, 24][i], 0.45)}
       </g>
     ))}
-  </>) },
-  stats: { name: "Statistics", group: "Wayfinding", h: 30, el: G(30, <>
+  </g>) },
+  stats: { name: "Statistics", group: "Wayfinding", h: 26, el: G(26, <g transform="translate(0 2)">
     {[0, 1, 2, 3].map(i => {
       const c = cols(4, 3);
       return (
         <g key={i}>
-          {head(c.x(i), 8, c.w * 0.8, 4)}
-          {text(c.x(i), 15, c.w)}{text(c.x(i), 18.5, c.w * 0.7)}
+          {line(c.x(i), 7, c.w * 0.78, 0.95, 3.2)}
+          {line(c.x(i), 13, c.w, 0.4)}
+          {line(c.x(i), 16.5, c.w * 0.65, 0.3)}
         </g>
       );
     })}
-    {rule(24)}
-  </>) },
+    {line(M, 20.5, W, 0.22)}
+  </g>) },
 };
 
 export function Glyph({ id }: { id: GlyphId }) {
   return <>{(GLYPHS[id] ?? GLYPHS.textrows).el}</>;
 }
 
-/** A block's wireframe: its elements stacked in order, filling the width.
- *  `accent` paints the interactive marks in the block's own intent colour. */
-export function Wireframe({ ids, gap = 3, accent }: { ids: GlyphId[]; gap?: number; accent?: string }) {
+/** A block's wireframe: its elements stacked in order, filling the width. */
+export function Wireframe({ ids, gap = 3 }: { ids: GlyphId[]; gap?: number; accent?: string }) {
   const list = ids?.length ? ids : (["textrows"] as GlyphId[]);
   return (
-    <div className="flex flex-col w-full"
-         style={{ gap, ...(accent ? ({ "--wire-accent": accent } as React.CSSProperties) : {}) }}>
+    <div className="flex flex-col w-full" style={{ gap }}>
       {list.map((id, i) => <Glyph key={`${id}-${i}`} id={id} />)}
     </div>
   );
