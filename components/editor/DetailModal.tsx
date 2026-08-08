@@ -151,9 +151,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
               </div>
             ))}
           </div>
-          {/* the page's wireframe rides along on every size: slim on phones,
-              full mini-stack on desktop, always to the right of the content */}
-          <div className="w-[124px] sm:w-[240px] shrink-0 border-l border-[var(--border)] overflow-y-auto p-2 sm:p-4">
+          <div className="hidden sm:block w-[240px] shrink-0 border-l border-[var(--border)] overflow-y-auto p-4">
             <div className="rounded-xl bg-[var(--card)] border-2 border-[var(--card-border)] overflow-hidden">
               <div className="text-center font-bold text-[12px] text-[var(--accent)] py-1.5">{page.name}</div>
               <div className="p-1.5 pt-0 flex flex-col gap-1">
