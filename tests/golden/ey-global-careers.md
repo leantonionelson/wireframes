@@ -36,8 +36,10 @@ you mean to change.
 
 ### What the fields mean
 
-- `glyph` - which wireframe drawing the block gets. One of the ids listed below,
-  chosen for what the section *is*, not for decoration.
+- `glyph` - the wireframe elements the block is made of, top to bottom, from the
+  ids listed below. Usually one; use a comma-separated list when the section is
+  genuinely several things stacked, e.g. `glyph: hero, cards3`. Chosen for what the
+  section *is*, not for decoration.
 - `role` - structural role. `header` · `nav` · `content` · `footer` · `external`. Header, nav, footer and external are page
   chrome and stay neutral; real content is `content`.
 - `intents` - which audiences the block serves, most important first, by name.

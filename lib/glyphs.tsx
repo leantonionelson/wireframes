@@ -6,11 +6,20 @@ import type { GlyphId } from "./model";
  * Two-tone by design: soft filled surfaces carry the shape so a block reads at
  * a glance, thin strokes carry the detail. Everything is currentColor, so a
  * glyph inherits the block's intent colour and stays legible on any of them.
- * Keep new glyphs inside x:4..68 and y:4..24 so a stack of blocks aligns. */
+ * Keep new glyphs inside x:4..68 and y:4..24 so a stack of blocks aligns.
+ *
+ * Sizing: a glyph fills the width it is given and takes its height from the
+ * 72:28 ratio, so it reads as the section it stands for rather than as an
+ * icon floating in the middle of the block. It used to be pinned to 28px
+ * tall, which letterboxed the drawing at natural size inside a much wider
+ * box. Callers that need a shorter glyph pass `ratio`. */
 
 const G = (children: React.ReactNode) => (
-  <svg viewBox="0 0 72 28" width="100%" height="28" fill="none" stroke="currentColor"
-       strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" aria-hidden="true">
+  // No height attribute: with a viewBox and width:100%, the SVG takes its
+  // intrinsic 72:28 ratio and the drawing fills the element edge to edge.
+  <svg viewBox="0 0 72 28" width="100%" fill="none" stroke="currentColor"
+       strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" aria-hidden="true"
+       style={{ display: "block", height: "auto" }}>
     {children}
   </svg>
 );
@@ -238,4 +247,15 @@ export const GLYPHS: Record<GlyphId, Entry> = {
 
 export function Glyph({ id }: { id: GlyphId }) {
   return <>{(GLYPHS[id] ?? GLYPHS.textrows).el}</>;
+}
+
+/** A block's wireframe: its glyphs stacked in order, filling the width they
+ *  are given. `gap` is the space between elements in the same block. */
+export function Wireframe({ ids, gap = 3 }: { ids: GlyphId[]; gap?: number }) {
+  const list = ids?.length ? ids : (["textrows"] as GlyphId[]);
+  return (
+    <div className="flex flex-col w-full" style={{ gap }}>
+      {list.map((id, i) => <Glyph key={`${id}-${i}`} id={id} />)}
+    </div>
+  );
 }

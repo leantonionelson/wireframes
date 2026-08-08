@@ -81,7 +81,7 @@ describe("edits", () => {
     const home = r.doc!.pages.find(p => p.name === "Home renamed")!;
     expect(home.blocks.at(-1)!.label).toBe("Brand new block");
     expect(home.blocks.at(-1)!.note).toBe("A note written by the AI.");
-    expect(home.blocks[0].glyph).toBe("cards4");
+    expect(home.blocks[0].glyphs).toEqual(["cards4"]);
   });
 
   it("an absent field keeps its value; (none) clears it", () => {
@@ -176,7 +176,7 @@ describe("truncation and malformed input", () => {
     expect(r.warnings.some(w => w.includes('unknown glyph "hologram"'))).toBe(true);
     expect(r.warnings.some(w => w.includes('unknown role "sparkle"'))).toBe(true);
     const first = r.doc!.pages.find(p => p.id === doc.pages[0].id)!;
-    expect(first.blocks[0].glyph).toBe(oldGlyph);
+    expect(first.blocks[0].glyphs).toEqual([oldGlyph]);
   });
 
   it("an unknown id is treated as a new item and warned about, not adopted", () => {

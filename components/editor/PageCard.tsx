@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { blockStyle, type Page, type Persona } from "@/lib/model";
-import { Glyph } from "@/lib/glyphs";
+import { Wireframe } from "@/lib/glyphs";
 import type { Sel } from "./types";
 
 /* ---------- page card on canvas ---------- */
@@ -41,7 +41,7 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
                 {b.flag && <span title={b.flag} className="ml-auto text-[9px] bg-red-600 text-white rounded px-1">!</span>}
                 {b.comments.length > 0 && <span className="text-[9px] bg-white/25 rounded px-1">{b.comments.length}</span>}
               </div>
-              <Glyph id={b.glyph} />
+              <Wireframe ids={b.glyphs} />
             </div>
           );
         })}

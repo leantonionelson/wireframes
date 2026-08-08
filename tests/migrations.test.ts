@@ -41,10 +41,17 @@ describe("migrateDoc", () => {
     expect(migrateDoc(d)).toEqual(d);
   });
 
+  it("wraps a v1 single glyph into the glyphs list", () => {
+    const d = migrateDoc(v0());
+    expect(d.pages[0].blocks[0].glyphs).toEqual(["hero"]);
+    expect((d.pages[0].blocks[0] as unknown as { glyph?: string }).glyph).toBeUndefined();
+  });
+
   it("touches nothing it does not own", () => {
     const src = v0();
     const d = migrateDoc(src);
-    expect(d.pages).toEqual(src.pages);
+    expect(d.pages[0].name).toBe(src.pages[0].name);
+    expect(d.pages[0].blocks[0].label).toBe("Hero");
     expect(d.rev).toBe(3);
     expect(d.updatedBy).toBe("someone");
   });

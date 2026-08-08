@@ -5,7 +5,7 @@ let n = 0;
 const id = () => "s" + (++n).toString(36);
 
 function b(label: string, glyph: GlyphId, opts: Partial<Block> = {}): Block {
-  return { id: id(), label, glyph, color: (opts.color ?? "content") as ColorRole,
+  return { id: id(), label, glyphs: [glyph], color: (opts.color ?? "content") as ColorRole,
     note: opts.note ?? "", component: opts.component ?? "", flag: opts.flag ?? "", comments: [] };
 }
 const header = () => b("Global header", "links", { color: "header", component: "Existing global header. No change." });

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
-import { CHROME_ROLES, COLOR_STYLES, type Block, type ColorRole, type GlyphId, type Page, type Persona } from "@/lib/model";
-import { GLYPHS } from "@/lib/glyphs";
+import { CHROME_ROLES, COLOR_STYLES, type Block, type ColorRole, type Page, type Persona } from "@/lib/model";
+import { GlyphPicker } from "./GlyphPicker";
 import { ICONS } from "./icons";
 import { IntentPicker } from "./IntentPicker";
 
@@ -32,16 +32,9 @@ export function Inspector({ page, block, me, personas, close, setPageNote, patch
               <input className="w-full border border-[var(--border)] rounded-lg p-2 bg-transparent" value={block.label}
                      onChange={e => patchBlock(page.id, block.id, { label: e.target.value })} />
             </Field>
-            <Field label="Wireframe">
-              <div className="grid grid-cols-4 gap-1">
-                {(Object.keys(GLYPHS) as GlyphId[]).map(g => (
-                  <button key={g} title={GLYPHS[g].name}
-                          className={`border rounded-lg p-1 text-[var(--accent)] ${block.glyph === g ? "border-[var(--accent)] bg-[var(--hover)]" : "border-[var(--border)]"}`}
-                          onClick={() => patchBlock(page.id, block.id, { glyph: g })}>
-                    {GLYPHS[g].el}
-                  </button>
-                ))}
-              </div>
+            <Field label={`Wireframe (${block.glyphs.length} element${block.glyphs.length === 1 ? "" : "s"}, stacked in order)`}>
+              <GlyphPicker glyphs={block.glyphs}
+                           onChange={glyphs => patchBlock(page.id, block.id, { glyphs })} />
             </Field>
             <Field label="Structural role">
               <div className="flex gap-1.5">

@@ -167,7 +167,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   const setPageNote = (pid: string, note: string) => mutate(d => { const p = d.pages.find(p => p.id === pid)!; p.note = note; return d; });
   const addChildPage = (pid: string | null) => mutate(d => {
     const sibs = d.pages.filter(p => p.parentId === pid);
-    d.pages.push({ id: uid(), name: "New page", parentId: pid, order: sibs.length, note: "", blocks: [blankBlock({ label: "Hero", glyph: "hero" })] });
+    d.pages.push({ id: uid(), name: "New page", parentId: pid, order: sibs.length, note: "", blocks: [blankBlock({ label: "Hero", glyphs: ["hero"] })] });
     return d;
   });
   const deletePage = (pid: string) => {

@@ -98,8 +98,10 @@ ${opening}
 
 ### What the fields mean
 
-- \`glyph\` - which wireframe drawing the block gets. One of the ids listed below,
-  chosen for what the section *is*, not for decoration.
+- \`glyph\` - the wireframe elements the block is made of, top to bottom, from the
+  ids listed below. Usually one; use a comma-separated list when the section is
+  genuinely several things stacked, e.g. \`glyph: hero, cards3\`. Chosen for what the
+  section *is*, not for decoration.
 - \`role\` - structural role. ${roles}. Header, nav, footer and external are page
   chrome and stay neutral; real content is \`content\`.
 - \`intents\` - which audiences the block serves, most important first, by name.
@@ -130,7 +132,7 @@ function blockMd(b: Block, i: number, personaName: (id: string) => string): stri
   const out: string[] = [];
   out.push(`#### ${i + 1}. ${b.label} \`bl:${b.id}\``);
   const head = fields([
-    ["glyph", b.glyph],
+    ["glyph", b.glyphs.join(", ")],
     ["role", b.color],
     ["intents", (b.intents ?? []).map(personaName).filter(Boolean).join(", ")],
   ]);
@@ -180,7 +182,7 @@ export function starterDoc(name: string): Doc {
       id: "home", name: "Home", parentId: null, order: 0,
       note: "Replace this page. What is it for, who arrives on it, and what do they leave with?",
       blocks: [{
-        id: "b1", label: "Hero", glyph: "hero", color: "content",
+        id: "b1", label: "Hero", glyphs: ["hero"], color: "content",
         note: "Replace this block. Why does this section exist, and what does it have to say?",
         component: "", flag: "", comments: [],
       }],
@@ -509,8 +511,17 @@ export function applyMarkdown(md: string, base: Doc): MdImport {
       const bid = ob?.id ?? uid();
       seenBlock.add(bid);
 
-      const g = bb.fields.glyph !== undefined ? toGlyph(bb.fields.glyph) : undefined;
-      if (bb.fields.glyph !== undefined && !g) warnings.push(`"${bb.title}": unknown glyph "${bb.fields.glyph}", kept ${ob?.glyph ?? "textrows"}.`);
+      // one or several, comma separated; unknown names are dropped with a warning
+      let gs: GlyphId[] | undefined;
+      if (bb.fields.glyph !== undefined) {
+        const wanted = bb.fields.glyph.split(/[,;]/).map(x => x.trim()).filter(Boolean);
+        const resolved = wanted.map(w => ({ w, g: toGlyph(w) }));
+        resolved.filter(r => !r.g).forEach(r =>
+          warnings.push(`"${bb.title}": unknown glyph "${r.w}", ignored.`));
+        const ok = resolved.filter(r => r.g).map(r => r.g!);
+        if (ok.length) gs = ok;
+        else if (wanted.length) warnings.push(`"${bb.title}": no usable glyph, kept ${(ob?.glyphs ?? ["textrows"]).join(", ")}.`);
+      }
       const r = bb.fields.role !== undefined ? toRole(bb.fields.role) : undefined;
       if (bb.fields.role !== undefined && !r) warnings.push(`"${bb.title}": unknown role "${bb.fields.role}", kept ${ob?.color ?? "content"}.`);
 
@@ -532,7 +543,7 @@ export function applyMarkdown(md: string, base: Doc): MdImport {
       const block: Block = {
         id: bid,
         label: bb.title || ob?.label || "Block",
-        glyph: g ?? ob?.glyph ?? "textrows",
+        glyphs: gs ?? ob?.glyphs ?? ["textrows"],
         color: r ?? ob?.color ?? "content",
         note: bb.prose.length ? (CLEAR(bNoteRaw) ? "" : bNoteRaw) : ob?.note ?? "",
         component: take(bb.fields, "component", ob?.component ?? "") ?? ob?.component ?? "",
@@ -549,7 +560,7 @@ export function applyMarkdown(md: string, base: Doc): MdImport {
         const diffs: string[] = [];
         if (ob.label !== block.label) diffs.push(`renamed from "${ob.label}"`);
         if (ob.note !== block.note) diffs.push("note");
-        if (ob.glyph !== block.glyph) diffs.push(`glyph → ${block.glyph}`);
+        if (ob.glyphs.join() !== block.glyphs.join()) diffs.push(`glyph → ${block.glyphs.join(", ")}`);
         if (ob.color !== block.color) diffs.push(`role → ${block.color}`);
         if (ob.component !== block.component) diffs.push("component");
         if (ob.flag !== block.flag) diffs.push(block.flag ? "flag" : "flag cleared");

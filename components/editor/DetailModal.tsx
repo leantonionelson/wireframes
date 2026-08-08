@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import { CHROME_ROLES, COLOR_STYLES, blockStyle, type Block, type ColorRole, type GlyphId, type Page, type Persona } from "@/lib/model";
-import { GLYPHS, GLYPH_GROUPS, Glyph } from "@/lib/glyphs";
+import { CHROME_ROLES, COLOR_STYLES, blockStyle, type Block, type ColorRole, type Page, type Persona } from "@/lib/model";
+import { GLYPHS, Wireframe } from "@/lib/glyphs";
 import { LogoMark } from "@/components/Theme";
 import { CopyBtn } from "@/components/AiExchange";
 import { ICONS } from "./icons";
 import { IntentPicker } from "./IntentPicker";
+import { GlyphPicker } from "./GlyphPicker";
 import { Button, IconButton, Modal, ModalHeader } from "@/components/ui";
 
 function pageToText(p: Page): string {
@@ -57,6 +58,8 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
   // Which blocks have their copy folded out. Collapsed by default: the page
   // reads as a stack of components first.
   const [openBlocks, setOpenBlocks] = useState<Set<string>>(new Set());
+  // which block currently has its wireframe picker open
+  const [editingWireframe, setEditingWireframe] = useState<string | null>(null);
   const toggleBlock = (bid: string) =>
     setOpenBlocks(s => { const n = new Set(s); if (n.has(bid)) n.delete(bid); else n.add(bid); return n; });
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -122,7 +125,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                          className="shrink-0 opacity-70" style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 150ms" }}>
                       <path d="M6 9l6 6 6-6" /></svg>
                   </div>
-                  <div className="px-4 pb-2 pt-0.5 max-w-[360px] mx-auto"><Glyph id={b.glyph} /></div>
+                  <div className="px-4 pb-2.5 pt-0.5"><Wireframe ids={b.glyphs} /></div>
                 </div>
                 {isOpen && <div className="p-5 pt-3.5">
                 <div className="flex items-center justify-end gap-1.5 mb-1">
@@ -159,16 +162,16 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                       ))
                     : <IntentPicker block={b} personas={personas}
                                     onChange={intents => patchBlock(page.id, b.id, { intents })} />}
-                  <select className="ml-auto border border-[var(--border)] rounded-full px-2 py-0.5 bg-transparent text-[11px]"
-                          value={b.glyph} onChange={e => patchBlock(page.id, b.id, { glyph: e.target.value as GlyphId })}>
-                    {GLYPH_GROUPS.map(grp => (
-                      <optgroup key={grp} label={grp}>
-                        {(Object.keys(GLYPHS) as GlyphId[]).filter(g => GLYPHS[g].group === grp)
-                          .map(g => <option key={g} value={g}>{GLYPHS[g].name}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
+                  <button className="ml-auto border border-[var(--border)] rounded-full px-3 py-0.5 text-[11px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"
+                          onClick={() => setEditingWireframe(editingWireframe === b.id ? null : b.id)}>
+                    {b.glyphs.map(g => GLYPHS[g]?.name ?? g).join(" + ")}
+                  </button>
                 </div>}
+                {canEdit && editingWireframe === b.id && (
+                  <div className="mt-2.5 pt-2.5 border-t border-[var(--border)]">
+                    <GlyphPicker glyphs={b.glyphs} onChange={glyphs => patchBlock(page.id, b.id, { glyphs })} />
+                  </div>
+                )}
                 <div className="mt-3 pt-2.5 border-t border-[var(--border)]">
                   {b.comments.length > 0 && (
                     <div className="space-y-1.5 mb-2">
@@ -212,7 +215,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                           <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
                         ))}
                       </div>
-                      <Glyph id={b.glyph} />
+                      <Wireframe ids={b.glyphs} gap={2} />
                     </div>
                   );
                 })}

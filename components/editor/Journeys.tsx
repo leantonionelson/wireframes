@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { PERSONA_COLORS, blockStyle, type Doc, type Journey, type Page, type Persona } from "@/lib/model";
-import { Glyph } from "@/lib/glyphs";
+import { Wireframe } from "@/lib/glyphs";
 import { LogoMark } from "@/components/Theme";
 import { CopyBtn } from "@/components/AiExchange";
 import { ICONS } from "./icons";
@@ -61,7 +61,7 @@ function MiniStack({ page, personas = [], max }: { page: Page; personas?: Person
           return (
             <div key={b.id} className="rounded px-1 pt-0.5" style={{ background: c.bg, color: c.fg }}>
               <div className="text-[8.5px] font-semibold truncate leading-tight">{b.label}</div>
-              <Glyph id={b.glyph} />
+              <Wireframe ids={b.glyphs} gap={2} />
             </div>
           );
         })}

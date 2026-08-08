@@ -29,7 +29,10 @@ export interface Comment {
 export interface Block {
   id: string;
   label: string;
-  glyph: GlyphId;
+  /** The wireframe elements this block is made of, top to bottom. A block is
+   *  often more than one thing (a hero above three cards), so this is a list.
+   *  v1 documents carried a single `glyph`; the v2 migration wraps it. */
+  glyphs: GlyphId[];
   color: ColorRole;
   note: string;        // markdown-ish free text: purpose, needs, content status
   component: string;   // e.g. "AEM: Promotional Banner"
@@ -133,7 +136,7 @@ export function newProjectDoc(name: string): Doc {
   return {
     id, name, schemaVersion: SCHEMA_VERSION, rev: 1, updatedAt: Date.now(), updatedBy: "created",
     pages: [{ id: "root", name: "Home", parentId: null, order: 0, note: "", blocks: [
-      { id: "b1", label: "Hero", glyph: "hero", color: "content", note: "", component: "", flag: "", comments: [] },
+      { id: "b1", label: "Hero", glyphs: ["hero"], color: "content", note: "", component: "", flag: "", comments: [] },
     ] }],
     personas: [], journeys: [], notes: [], members: [],
   };
@@ -181,7 +184,7 @@ export function uid(): string {
 
 export function blankBlock(partial?: Partial<Block>): Block {
   return {
-    id: uid(), label: "New block", glyph: "textrows", color: "content",
+    id: uid(), label: "New block", glyphs: ["textrows"], color: "content",
     note: "", component: "", flag: "", comments: [], ...partial,
   };
 }
