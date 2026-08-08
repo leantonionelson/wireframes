@@ -29,18 +29,13 @@ Known gaps, from [DEVELOPMENT.md](DEVELOPMENT.md): no tenancy of any kind (`GET 
 
 Landed on this branch: vitest, 19 tests in `tests/md.test.ts` against a frozen EY fixture (enriched with comments/notes/members so preservation is actually exercised), a golden file of the export at `tests/golden/`, and a GitHub Action running typecheck + tests on push/PR. Covers identity, annotation preservation, edit reporting, absent-vs-`(none)` field semantics, structural surgery, journey-step integrity, truncation, malformed input, unknown ids/glyphs/roles, escape round-trips, and both create-mode paths.
 
-### 0.2 `schemaVersion` and versioned migrations — **S**
+### 0.2 `schemaVersion` and versioned migrations — **S** — ✅ done
 
-- Add `schemaVersion` to `Doc` (current shape = v1).
-- New `lib/migrations.ts`: pure, tested `v1→v2→…` functions; `normDoc` becomes the v0→v1 migration and boundary reads run the chain.
-- Rule from the blueprint, adopted verbatim: a historical project must never become unreadable because a new domain became required. Every new domain in phase 2 ships as *optional* fields plus a migration.
+`lib/migrations.ts` holds pure `v(n)→v(n+1)` functions; `migrateDoc` runs the chain at boundaries and `normDoc` is its alias, so no caller changed. New docs are stamped at creation. Tested: v0 lift, idempotence, pass-through, no-collateral-damage.
 
-### 0.3 Repository interfaces — **S**
+### 0.3 Repository interfaces — **S** — ✅ done
 
-[lib/store.ts](lib/store.ts) is already an adapter with two implementations; formalise it so phase 1 can add a third without touching callers:
-
-- Extract `ProjectRepository` / `VersionRepository` interfaces (`lib/repositories/interfaces.ts`); move the pg and file implementations to `lib/repositories/{postgres,file}.ts` unchanged.
-- API routes keep importing the same façade functions; nothing above the interface may import a vendor SDK. This is the blueprint's adapter-boundary principle made mechanical.
+`lib/repositories/interfaces.ts` defines `ProjectRepository`/`VersionRepository` (whole-doc semantics, revision-checked `save`); implementations moved to `postgres.ts` and `file.ts` unchanged; `lib/store.ts` is now a thin façade. `tests/repository.test.ts` is the contract suite (seven cases including stale-rev conflict and missing-project save) — the Firestore implementation must pass it against the emulator in 1.2.
 
 ### 0.4 Split Editor.tsx — **M**
 

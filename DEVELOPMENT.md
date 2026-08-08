@@ -33,8 +33,10 @@ SCAFFOLD_PASSWORD=anything
 
 | File | What it holds |
 |---|---|
-| `lib/model.ts` | All types, `normDoc` (backfills old docs), `blockStyle`/`readableOn` (intent colouring), `initialsOf` |
-| `lib/store.ts` | Storage adapter, `newProjectDoc` |
+| `lib/model.ts` | All types, `newProjectDoc`, `blockStyle`/`readableOn` (intent colouring), `initialsOf` |
+| `lib/migrations.ts` | `schemaVersion` chain; `normDoc` is the boundary alias for `migrateDoc` |
+| `lib/store.ts` | Storage façade: picks a `Repository` implementation at runtime |
+| `lib/repositories/` | The storage boundary: `interfaces.ts` (contract), `postgres.ts`, `file.ts`. New backends implement the interfaces and pass `tests/repository.test.ts` |
 | `lib/glyphs.tsx` | 36 wireframe glyphs in 6 groups, two-tone (filled surfaces + stroke detail) |
 | `lib/seed.ts` | The EY Global Careers seed project |
 | `lib/auth.ts` | Single-password gate, HMAC cookie |

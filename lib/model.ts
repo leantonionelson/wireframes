@@ -122,7 +122,22 @@ export const PERSONA_COLORS = ["#8b5cf6", "#f59e0b", "#0ea5e9", "#10b981", "#ef4
 
 // Boundary normalisation is the migration chain; the versioned functions
 // live in lib/migrations.ts. normDoc stays as the boundary-facing name.
+import { SCHEMA_VERSION } from "./migrations";
 export { migrateDoc, migrateDoc as normDoc, SCHEMA_VERSION } from "./migrations";
+
+export function newProjectDoc(name: string): Doc {
+  // Readable slug plus enough randomness that a share URL cannot be guessed
+  // or enumerated from the project name alone.
+  const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") + "-" +
+    Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+  return {
+    id, name, schemaVersion: SCHEMA_VERSION, rev: 1, updatedAt: Date.now(), updatedBy: "created",
+    pages: [{ id: "root", name: "Home", parentId: null, order: 0, note: "", blocks: [
+      { id: "b1", label: "Hero", glyph: "hero", color: "content", note: "", component: "", flag: "", comments: [] },
+    ] }],
+    personas: [], journeys: [], notes: [], members: [],
+  };
+}
 
 export const COLOR_STYLES: Record<ColorRole, { bg: string; fg: string; label: string }> = {
   header:  { bg: "#a855f7", fg: "#ffffff", label: "Global header" },
