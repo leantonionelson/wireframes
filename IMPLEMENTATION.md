@@ -49,9 +49,9 @@ Blueprint §13: the phone gets a different projection, not a shrunken canvas.
 - `768–1199px`: keep the canvas with collapsible panels and touch-safe targets.
 - Selection state shared between projections; viewport/selection persisted per device, never in the shared doc.
 
-### 0.6 Critical-flow UI tests — **S**
+### 0.6 Critical-flow UI tests — **S** — ✅ done (mobile flow pending 0.5)
 
-Playwright over the dev server: create project, edit block, export md, import md with review, undo, mobile sitemap navigation. These are the flows every later phase can break.
+Playwright (`e2e/critical-flows.spec.ts`, `npm run test:e2e`): create project → add block → rename in inspector → export md → import an edited copy through the review list → apply → undo → verify on disk → purge. Runs its own dev server on port 3100 with auth disabled, so it never touches a normal dev session; CI runs it as a second job with failure artifacts. The mobile-navigation flow gets added with 0.5.
 
 ### 0.7 Small hardenings — **S** — ✅ done
 

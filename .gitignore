@@ -43,3 +43,7 @@ data/
 
 # Local Netlify folder
 .netlify
+
+# playwright
+/test-results/
+/playwright-report/
