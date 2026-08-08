@@ -41,7 +41,8 @@ SCAFFOLD_PASSWORD=anything
 | `lib/seed.ts` | The EY Global Careers seed project |
 | `lib/auth.ts` | Single-password gate, HMAC cookie |
 | `lib/md.ts` | The Markdown round trip: `docToMarkdown`, `applyMarkdown`, `starterDoc` |
-| `components/Editor.tsx` | Everything canvas-side. Large; the sub-components are at the bottom |
+| `components/Editor.tsx` | The editor orchestrator: canvas, selection, panel/modal composition |
+| `components/editor/` | The editor's modules: `useDoc` (doc machinery, both write paths), one file per surface |
 | `components/AiExchange.tsx` | The Markdown export/import modal, both modes, plus `CopyBtn` |
 | `components/Auth.tsx` | `useAuth` hook + login modal |
 

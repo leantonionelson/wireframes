@@ -37,14 +37,9 @@ Landed on this branch: vitest, 19 tests in `tests/md.test.ts` against a frozen E
 
 `lib/repositories/interfaces.ts` defines `ProjectRepository`/`VersionRepository` (whole-doc semantics, revision-checked `save`); implementations moved to `postgres.ts` and `file.ts` unchanged; `lib/store.ts` is now a thin façade. `tests/repository.test.ts` is the contract suite (seven cases including stale-rev conflict and missing-project save) — the Firestore implementation must pass it against the emulator in 1.2.
 
-### 0.4 Split Editor.tsx — **M**
+### 0.4 Split Editor.tsx — **M** — ✅ done
 
-The single file is the growth bottleneck for every later view. Split along the blueprint's Appendix C shape, no behaviour change:
-
-- `components/editor/` → `Canvas` (pan/zoom/tree), `PageCard`, `FloatingToolbar`, `Inspector`, `DetailModal`, `NotesLayer`, `JourneysModal`, `HistoryPanel`, `MemberPicker`, `icons.tsx`, plus a `useDoc` hook owning load/poll/save/undo/mutate.
-- The three traps in DEVELOPMENT.md (overlays kill canvas interaction, loader gates canvas mount, notes are content not a mode) become comments at the relevant seams so they survive the split.
-
-Acceptance: no visual or behavioural diff; the traps' regression checks pass by hand once, then via 0.6.
+1,615 lines became a 548-line orchestrator plus 13 modules under `components/editor/`: `useDoc` (load/poll/save/undo/mutate/annotate transport), `PageCard`, `FloatingToolbar`, `Inspector`, `DetailModal`, `NotesLayer`, `Journeys` (modal + board + overlay), `HistoryPanel`, `ExportMenu`, `People`, `IntentPicker`, `icons`, `types`. Code moved verbatim; verified live: selection, floating toolbar, inspector, detail modal, journeys, history, export menu, notes mode, and a save→undo round trip through the hook.
 
 ### 0.5 Mobile projection — **M**
 
