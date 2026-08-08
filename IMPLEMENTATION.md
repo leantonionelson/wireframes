@@ -25,16 +25,9 @@ Known gaps, from [DEVELOPMENT.md](DEVELOPMENT.md): no tenancy of any kind (`GET 
 
 *Blueprint §27 phase 0, §29 steps 1–2. Everything later leans on this.*
 
-### 0.1 Test harness and Markdown golden files — **S**, first
+### 0.1 Test harness and Markdown golden files — **S**, first — ✅ done
 
-There are currently zero tests; the md round trip was verified with a throwaway API route. Before anything else changes:
-
-- Add vitest (no UI runner needed yet).
-- Port the four verifications already proven by hand into permanent tests against a fixture copy of the EY document: **identity** (export → import produces zero changes and a deep-equal doc), **edits** (rename/glyph/add report exactly those changes), **surgery** (page delete, cross-page block move, journey step dropped with warning), **truncation** (half a file reports as removals, never silently).
-- Golden-file the export: a checked-in `.md` snapshot of the EY fixture that fails the build when the format drifts unintentionally.
-- Malformed-input cases: stray headings, unknown glyphs/roles, duplicate ids, fenced code blocks, backticks and literal `\n` in field values.
-
-Acceptance: `npm test` runs in CI (GitHub Action) and the round-trip identity invariant is enforced from here on.
+Landed on this branch: vitest, 19 tests in `tests/md.test.ts` against a frozen EY fixture (enriched with comments/notes/members so preservation is actually exercised), a golden file of the export at `tests/golden/`, and a GitHub Action running typecheck + tests on push/PR. Covers identity, annotation preservation, edit reporting, absent-vs-`(none)` field semantics, structural surgery, journey-step integrity, truncation, malformed input, unknown ids/glyphs/roles, escape round-trips, and both create-mode paths.
 
 ### 0.2 `schemaVersion` and versioned migrations — **S**
 

@@ -1,0 +1,1259 @@
+{
+  "id": "ey-global-careers",
+  "name": "EY, Global Careers website",
+  "rev": 75,
+  "updatedAt": 1786107251941,
+  "updatedBy": "anon",
+  "pages": [
+    {
+      "id": "sc",
+      "name": "Careers at EY",
+      "parentId": null,
+      "order": 0,
+      "note": "The global careers homepage is the brand front door and the routing layer. It has two tasks: to move visitors who have job intent quickly towards relevant roles or their own market, and to give visitors who are still deciding a substantive reason to consider EY. It is not intended to hold detail.\n\nAround a quarter of arrivals return from the application system, and most other visitors arrive from search with broad rather than specific intent. Within the page, 77 per cent of clicks go to Find jobs, and the country selector is the fifth most visited page across ey.com, so demand for both routes is already evidenced.\n\nContent published here is inherited by local sites through AEM rollout. Local teams receive release notes and then localise, translate and publish to their own priorities, so publication in each market is a local action rather than an automatic consequence of global publishing.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "s1",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s2",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation across the five careers pages: Job search, What you can do here, What it's like to work here, How to join us, and FAQ. The order reflects observed use, with Job search taking 79 per cent of sub navigation clicks.",
+          "component": "AEM Sub Navigation",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s3",
+          "label": "Hero with intent CTAs",
+          "glyph": "hero",
+          "color": "content",
+          "note": "The hero separates the audience by intent within the first screen, using two calls to action: Search jobs, and Explore careers at EY.\n\nThis addresses a known problem in which visitors with job intent use the global site search and receive site wide results rather than roles.",
+          "component": "AEM Hero Banner, image variant",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-research"
+          ]
+        },
+        {
+          "id": "s4",
+          "label": "Market router",
+          "glyph": "map",
+          "color": "content",
+          "note": "A block placed high on the page that offers visitors their own market: \"Looking for roles in your country?\", linking either to the local careers site or to a job search already filtered to that country.\n\nWhy it is here. Visitors who reached the global site by default should be moved onward to their own market rather than held on a page that cannot serve them. India and the United States together account for 55 per cent of visitors, and 195,260 visits to the country selector show that visitors already localise themselves by hand.\n\nWhat it needs to do. A single call to action whose destination follows the visitor's location. Someone in India reaches Indian roles and someone in Germany reaches German roles, without first having to find and use a country selector.",
+          "component": "Existing content component. Delivery approach to be confirmed with EY.",
+          "flag": "QUESTION FOR EY\nIs a dynamic or conditional link possible on this page, so that a single call to action resolves to the visitor's own market? If it is, how would EY prefer to deliver it, and what effort is involved?",
+          "comments": [
+            {
+              "id": "fixc1",
+              "author": "stephanie",
+              "text": "Can we route by IP as a default?",
+              "at": 1786080000000
+            }
+          ],
+          "intents": [
+            "int-local"
+          ]
+        },
+        {
+          "id": "lm1",
+          "label": "Local market block",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "An optional block that a local market authors for itself, shown on the global homepage to visitors from that market. It exists for markets that have no local careers site, or no capacity to run one, but still need to say something specific to their own candidates.\n\nWhy it is here. Roughly one in five of the locales tested have no careers page, so for those markets the market router has nowhere to send people. The two blocks work together: the router moves visitors on where a local site exists, and this block serves them where one does not.\n\nWhat the content should be. Two independent sources point at the same answer. Five questions are already designated in the content plan as asked globally and answered locally: starting salary, benefits, remote and hybrid working, application steps and deadlines, and eligibility or right to work. Conductor scores the current global page 37 out of 100 and names the same gaps: salary and benefits framing, remote policy, process, and locations. These are precisely the questions global cannot answer and local can.\n\nSuggested order, by value and by how easily a market can sustain it.\n\n1. Roles in this market. A job search filtered to the country. This needs no authoring and nothing to maintain, because the application system is the source of truth, and it serves the strongest observed behaviour on the page, where 77 per cent of clicks go to Find jobs.\n\n2. The evergreen answers: eligibility and right to work, the shape of the local application process, and the market's position on flexible working. These change rarely and carry little maintenance.\n\n3. Only where a market can sustain them: pay and benefits framing, and intake dates. These carry the highest demand, since salary is the most asked question of all, but they date quickly and right to work is a stated risk area.\n\n4. Optional: a single local proof point, such as a named person or an office. This addresses the weakest measured area of the site, but it is the most effort to produce.\n\nA caution. This is inherited content on EY's global homepage, so an unmaintained version is publicly wrong at global level. Anything perishable should carry an owner and a review date, and the block should fall back to the global default when empty rather than showing content that has dated.",
+          "component": "Authorable slot within an inherited page. Approach to be confirmed with EY.",
+          "flag": "QUESTION FOR EY\nCan a block on the global homepage be left open for local markets to author, while the rest of the page continues to inherit from global? If it can, how would EY prefer to handle it, and what governs the empty state when a market has authored nothing?",
+          "comments": [],
+          "intents": [
+            "int-local",
+            "int-role"
+          ]
+        },
+        {
+          "id": "s5",
+          "label": "Intro, the EVP in brief",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "A short and concrete statement of what EY offers, written for the visitor who is still deciding. The current copy scores 37 out of 100 for content quality, assessed as inspirational but without substance.",
+          "component": "AEM Rich Text. Content to be rewritten.",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s6",
+          "label": "Main entry points",
+          "glyph": "cards3",
+          "color": "content",
+          "note": "Three routes by audience: experienced professionals, early careers, and the service line doorway.",
+          "component": "Existing visual link card row. Labels and destinations to be revised.",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-research"
+          ]
+        },
+        {
+          "id": "s7",
+          "label": "Search jobs",
+          "glyph": "search",
+          "color": "content",
+          "note": "The transactional block for visitors who have scrolled past the hero. It uses the same market aware search as the router above.\n\nThe application system supports country filtering directly in the link, using a two letter ISO country code. The same maintained mapping applies as for the router.",
+          "component": "Existing job search component",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-local"
+          ]
+        },
+        {
+          "id": "s8",
+          "label": "Why EY, proof block",
+          "glyph": "text2col",
+          "color": "content",
+          "note": "Two or three employer brand proof points with genuine substance, addressing the Personal Fulfilment and Inclusive Culture gaps identified in the Barometer.\n\nWritten so that it survives extraction by AI answer engines.",
+          "component": "AEM feature or promotional banner. New content.",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s9",
+          "label": "People stories",
+          "glyph": "people",
+          "color": "content",
+          "note": "Named individuals and their accounts, forming the evidence layer. This is currently the weakest content on the site.\n\nContent already exists. The former People stories page has been retired and now redirects to Shapers of the Future at /en_gl/careers/shapers-of-the-future, which is live and carries named individuals with country attribution and video. This block should route to that page rather than commission new content. Shapers of the future is now represented in this wireframe as a page under What it's like to work here, so this block is a route into it rather than a content commission.\n\nBefore the retired pages are deleted, 22 individual person pages in the content inventory should be harvested. They record zero views and are all marked for deletion, but they hold named individuals with quotes and stories, which is the raw material this block needs.",
+          "component": "Link to the existing Shapers of the Future page",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "sa",
+          "label": "Talent Community sign-up",
+          "glyph": "form",
+          "color": "content",
+          "note": "The capture route for visitors without a current match. It is already the second most engaged element on the page at 49,703 clicks. Both variants are retained, early careers and experienced.",
+          "component": "AEM Promotional Banner. Copy to be sharpened.",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role"
+          ]
+        },
+        {
+          "id": "sb",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "sm",
+      "name": "Job search",
+      "parentId": "sc",
+      "order": 0,
+      "note": "The transaction hub. Its purpose is to reach relevant roles in the fewest steps, in the visitor's own market where one exists.\n\nWithin the Job search menu, experienced professionals account for 50 per cent of clicks and students and entry level for 29 per cent, so the page leads with those two routes.\n\nThis page hands candidates over to careers.ey.com and the SuccessFactors application system. The outbound link must carry market context, and the return path must not deposit candidates on an unrelated market's page.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "sd",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "se",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation across the five careers pages: Job search, What you can do here, What it's like to work here, How to join us, and FAQ. The order reflects observed use, with Job search taking 79 per cent of sub navigation clicks.",
+          "component": "AEM Sub Navigation",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "sf",
+          "label": "Hero, slim",
+          "glyph": "hero",
+          "color": "content",
+          "note": "Title and search only. No narrative content on this page.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role"
+          ]
+        },
+        {
+          "id": "sg",
+          "label": "Market-aware job search",
+          "glyph": "search",
+          "color": "content",
+          "note": "The same component and behaviour as the market router on the homepage, delivered as an Adobe Target experience fragment with no custom code.\n\nCountry filtering is supported directly in the job search link using a two letter ISO country code.",
+          "component": "",
+          "flag": "The same decisions apply as for the homepage router: one global fragment or one per market, and confirmation of consistent delivery through Target. The locale to country mapping requires a maintained table, since an unrecognised value returns an empty result set rather than an error.",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-local"
+          ]
+        },
+        {
+          "id": "sh",
+          "label": "Experienced professionals route",
+          "glyph": "cta",
+          "color": "content",
+          "note": "The larger of the two routes, taking 50 per cent of Job search menu clicks and 8,209 clicks today. Retained.",
+          "component": "AEM Promotional Banner",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role"
+          ]
+        },
+        {
+          "id": "si",
+          "label": "Early careers route",
+          "glyph": "cta",
+          "color": "content",
+          "note": "The second route, taking 29 per cent of Job search menu clicks and 4,862 clicks today. Retained.\n\nDecision required. Student and entry-level programs is the eighth most visited page in the estate at 37,779 views and has no home in the six page structure. Either it is retained as a page in its own right, or its content is split between this route and How to join us. It should not be retired by omission.",
+          "component": "AEM Promotional Banner",
+          "flag": "Decision required on where Student and entry-level programs content lives.",
+          "comments": [],
+          "intents": [
+            "int-role"
+          ]
+        },
+        {
+          "id": "sj",
+          "label": "Service line roles",
+          "glyph": "carousel",
+          "color": "content",
+          "note": "Retained, with content revised.",
+          "component": "AEM Carousel",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-research"
+          ]
+        },
+        {
+          "id": "sk",
+          "label": "Talent Community fallback",
+          "glyph": "form",
+          "color": "content",
+          "note": "The capture route for visitors who find no suitable match.",
+          "component": "AEM Promotional Banner",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role"
+          ]
+        },
+        {
+          "id": "sl",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "sv",
+      "name": "What you can do here",
+      "parentId": "sc",
+      "order": 1,
+      "note": "Role and service line discovery. This page explains what the work actually involves.\n\nIt receives 141,000 visits but holds attention for only one minute and 17 seconds, with a 21 per cent bounce rate. Thin content is the identified cause. The Parthenon page demonstrates the remedy: role relevant depth holds attention for two minutes and 42 seconds, the strongest engagement on the site.\n\nThe content principle is fewer pages with greater depth. Each service line follows the Parthenon pattern rather than a short card.\n\nOne item from the content inventory to place deliberately. AI and Careers (4,307 views) is marked for deletion. The substance is worth keeping somewhere on this page or the Technology service line page, because 70 per cent of candidates use generative AI to evaluate employers and EY's own research names uncertainty about AI as the driver behind most candidate questions.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "sn",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "so",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation across the five careers pages: Job search, What you can do here, What it's like to work here, How to join us, and FAQ. The order reflects observed use, with Job search taking 79 per cent of sub navigation clicks.",
+          "component": "AEM Sub Navigation",
+          "flag": "",
+          "comments": [
+            {
+              "id": "fixc2",
+              "author": "claude",
+              "text": "Copy still pending from brand.",
+              "at": 1786081000000
+            }
+          ]
+        },
+        {
+          "id": "sp",
+          "label": "Hero, video variant",
+          "glyph": "video",
+          "color": "content",
+          "note": "Retained as currently published.",
+          "component": "AEM Hero Banner, video variant",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "sq",
+          "label": "Intro",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "To be rewritten as a plain account of what the work involves.",
+          "component": "AEM Rich Text",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "sr",
+          "label": "Service line explorer",
+          "glyph": "carousel",
+          "color": "content",
+          "note": "Each card leads to a service line page built on the template below. To be revised.",
+          "component": "AEM Carousel or card grid",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research",
+            "int-role"
+          ]
+        },
+        {
+          "id": "ss",
+          "label": "What working on it is like",
+          "glyph": "image",
+          "color": "content",
+          "note": "Connects this page to the two culture pages. New content.",
+          "component": "AEM feature block",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "st",
+          "label": "Index Page Linker",
+          "glyph": "linker",
+          "color": "content",
+          "note": "Retained. It currently drives more than 2,000 onward clicks.",
+          "component": "AEM Index Page Linker",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "su",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "s15",
+      "name": "Service line template",
+      "parentId": "sv",
+      "order": 0,
+      "note": "One card represents the retained set of service line pages, with Parthenon as the model to follow. The remaining service line pages are retired.\n\nThe retained list is to be confirmed against the content inventory.\n\nTwo points from the content inventory. Careers in People Advisory Services (5,450 views) is marked for deletion because that service line now sits within Tax and Consulting, so its content should be split between those two pages. Careers in Strategy and Transactions and Careers in EY-Parthenon both report 40,369 views against a note reading \"Two URLS for page\", so they are one page on two addresses and need canonicalising to a single URL.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "sw",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "sx",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation across the five careers pages: Job search, What you can do here, What it's like to work here, How to join us, and FAQ. The order reflects observed use, with Job search taking 79 per cent of sub navigation clicks.",
+          "component": "AEM Sub Navigation",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "sy",
+          "label": "Hero",
+          "glyph": "hero",
+          "color": "content",
+          "note": "As currently published.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "sz",
+          "label": "Intro with role types",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "An introduction covering the types of role available.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research",
+            "int-role"
+          ]
+        },
+        {
+          "id": "s10",
+          "label": "The work, named examples",
+          "glyph": "text2col",
+          "color": "content",
+          "note": "Depth on the Parthenon model, using named examples of the work. On the Parthenon page, the Strategy Consulting link alone takes 39 per cent of clicks, which indicates the appetite for this level of detail.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s11",
+          "label": "Role family links",
+          "glyph": "links",
+          "color": "content",
+          "note": "Visual links through to role families.",
+          "component": "AEM Visual Link",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-research"
+          ]
+        },
+        {
+          "id": "s12",
+          "label": "Specialisms",
+          "glyph": "accordion",
+          "color": "content",
+          "note": "An accordion of specialisms, following the pattern used on the Consulting page today.",
+          "component": "AEM Accordion",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s13",
+          "label": "Find jobs, pre-filtered",
+          "glyph": "search",
+          "color": "content",
+          "note": "A job search pre-filtered to this service line.\n\nCountry and business area can be combined in a single link. Business area values are the plain labels used by the application system: Assurance, CBS, Consulting, Strategy and Transactions, and Tax.",
+          "component": "",
+          "flag": "The set of per service line links requires a named owner. Labels must match the application system values exactly, and the country mapping described on the homepage router applies here as well.",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-local"
+          ]
+        },
+        {
+          "id": "s14",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "s1g",
+      "name": "What it's like to work here",
+      "parentId": "sc",
+      "order": 2,
+      "note": "The culture evidence. This is where the employer brand gaps are most visible: the Barometer scores EY weakest on Personal Fulfilment, covering flexibility and supportive management, and on Inclusive Culture.\n\nThe page also bounces hardest of the five at 26 per cent and produces the least onward movement. Its most clicked element today is the My EY login, which indicates that visitors are transacting even here.\n\nThe content principle is evidence rather than description. Named people and specific detail, written to be quotable, because external sites currently supply the answers to what working at EY is like.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "s16",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s17",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation across the five careers pages: Job search, What you can do here, What it's like to work here, How to join us, and FAQ. The order reflects observed use, with Job search taking 79 per cent of sub navigation clicks.",
+          "component": "AEM Sub Navigation",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s18",
+          "label": "Hero",
+          "glyph": "hero",
+          "color": "content",
+          "note": "Retained as currently published.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s19",
+          "label": "Culture, answered properly",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "A substantive account of the culture, including how experience varies between teams. EY's own research identifies this uncertainty as the driver behind most candidate questions to AI tools. New content.",
+          "component": "AEM Rich Text",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1a",
+          "label": "Personal Fulfilment proof",
+          "glyph": "image",
+          "color": "content",
+          "note": "Evidence against the Personal Fulfilment gap identified in the Barometer, covering flexibility and supportive management.\n\nThis block consolidates two existing pages rather than starting from nothing: Personalized career development (7,607 views) and Flexibility and mobility (7,594 views), which are both retired into this page. Note that policy detail, hours and remote specifics are among the questions answered locally, so only the principle and the commitment belong here.",
+          "component": "AEM feature block",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1b",
+          "label": "Inclusive Culture proof",
+          "glyph": "image",
+          "color": "content",
+          "note": "Evidence against the Inclusive Culture gap identified in the Barometer.\n\nThis block consolidates three existing pages rather than starting from nothing: Inclusiveness across socio-economic backgrounds (1,589 views), Inclusiveness for everyone (1,573) and Inclusiveness and your career (373). Their combined traffic is small, but they are the substance this page currently lacks.",
+          "component": "AEM feature block",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1c",
+          "label": "People stories",
+          "glyph": "people",
+          "color": "content",
+          "note": "Named individuals and their accounts. New content.\n\nContent already exists. The former People stories page has been retired and now redirects to Shapers of the Future at /en_gl/careers/shapers-of-the-future, which is live and carries named individuals with country attribution and video. This block should route to that page rather than commission new content. Shapers of the future is now represented in this wireframe as a page under What it's like to work here, so this block is a route into it rather than a content commission.\n\nBefore the retired pages are deleted, 22 individual person pages in the content inventory should be harvested. They record zero views and are all marked for deletion, but they hold named individuals with quotes and stories, which is the raw material this block needs.",
+          "component": "Link to the existing Shapers of the Future page",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1d",
+          "label": "Talent Community",
+          "glyph": "form",
+          "color": "content",
+          "note": "Retained.",
+          "component": "AEM Promotional Banner",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role"
+          ]
+        },
+        {
+          "id": "s1e",
+          "label": "Index Page Linker",
+          "glyph": "linker",
+          "color": "content",
+          "note": "Retained.",
+          "component": "AEM Index Page Linker",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1f",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "s1q",
+      "name": "How to join us",
+      "parentId": "sc",
+      "order": 3,
+      "note": "Expectation setting for the recruitment process at a conceptual level. It covers the stages and their purpose, not market specific mechanics such as formats, timings or booking, which belong to local sites.\n\nThis page also resolves the how we hire and interview tips content, which sits outside the agreed content parameters at global level.\n\nIt owns the post application moment. A quarter of all traffic to the global careers page is people returning from the application system, and that state currently has no destination.\n\nThis page absorbs the two pages that breach the content parameters, and they carry real traffic: How we hire (23,336 views) and Interview tips (16,364), together 39,700. Their stages and intent are rewritten conceptually here, while formats, timings and booking move to local sites. What we look for (5,218 views) folds in wholesale. Each retired URL needs a redirect to this page rather than to the careers homepage.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "s1h",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s1i",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation across the five careers pages: Job search, What you can do here, What it's like to work here, How to join us, and FAQ. The order reflects observed use, with Job search taking 79 per cent of sub navigation clicks.",
+          "component": "AEM Sub Navigation",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s1j",
+          "label": "Hero, slim",
+          "glyph": "hero",
+          "color": "content",
+          "note": "Title and short introduction.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1k",
+          "label": "The process, conceptually",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "Numbered stages explaining what each stage of the process is for. No formats, timings or booking detail, which belong to local sites.",
+          "component": "AEM Rich Text",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research",
+            "int-continue"
+          ]
+        },
+        {
+          "id": "s1l",
+          "label": "What we look for",
+          "glyph": "text2col",
+          "color": "content",
+          "note": "What EY assesses against, described plainly. New content.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1m",
+          "label": "After you apply",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "What happens next, how to check status through My EY, and what candidates can do while waiting.\n\nThis addresses the silence following application, which EY's own research rates as a critical friction point.",
+          "component": "New content",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-continue"
+          ]
+        },
+        {
+          "id": "s1n",
+          "label": "FAQ routing block",
+          "glyph": "linker",
+          "color": "content",
+          "note": "A route through to the FAQ page.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research",
+            "int-continue"
+          ]
+        },
+        {
+          "id": "s1o",
+          "label": "Find jobs",
+          "glyph": "search",
+          "color": "content",
+          "note": "Retained.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role"
+          ]
+        },
+        {
+          "id": "s1p",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "s1x",
+      "name": "Post-application landing",
+      "parentId": "s1q",
+      "order": 0,
+      "note": "The destination the application system should return candidates to, in place of the generic homepage.\n\nIt acknowledges the state the candidate is actually in: the application has been received, these are the next steps, here are further roles in their market, the Talent Community, and background on EY.\n\nThis is wireframed now so that the destination exists when the return link is corrected.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "s1r",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s1s",
+          "label": "Application received",
+          "glyph": "cta",
+          "color": "content",
+          "note": "Confirmation that the application has been received, followed by the next steps.",
+          "component": "",
+          "flag": "Dependent on the SuccessFactors return link work with EY. Wireframed now so that the destination exists once the link is corrected.",
+          "comments": [],
+          "intents": [
+            "int-continue"
+          ]
+        },
+        {
+          "id": "s1t",
+          "label": "More roles in your market",
+          "glyph": "search",
+          "color": "content",
+          "note": "Further roles in the candidate's own market, using the same filtered job search as the router.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-continue",
+            "int-local"
+          ]
+        },
+        {
+          "id": "s1u",
+          "label": "Talent Community",
+          "glyph": "form",
+          "color": "content",
+          "note": "The capture route for candidates who wish to stay in contact.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-continue"
+          ]
+        },
+        {
+          "id": "s1v",
+          "label": "About EY, brand layer",
+          "glyph": "cards3",
+          "color": "content",
+          "note": "Background on EY, for the candidate who has just applied and is now researching the firm.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s1w",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "s27",
+      "name": "FAQ",
+      "parentId": "sc",
+      "order": 4,
+      "note": "A new page answering the questions candidates actually ask, in their own words. It also determines how EY is described by AI answer engines, which now matters directly: 70 per cent of candidates use generative AI to evaluate employers, and referrals from ChatGPT already appear in EY's own analytics. At present external forums supply these answers.\n\nThis page is identified as globally owned in EY's content strategy.\n\nThe structure is fifteen global questions in four groups. A further five questions are acknowledged and then directed to local sites, covering salary, benefits, remote working, application steps and eligibility.\n\nEvery answer is written to stand alone, to lead with the answer, and to name EY rather than using the first person.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "s1y",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s1z",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation across the five careers pages: Job search, What you can do here, What it's like to work here, How to join us, and FAQ. The order reflects observed use, with Job search taking 79 per cent of sub navigation clicks.",
+          "component": "AEM Sub Navigation",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s20",
+          "label": "Hero, slim",
+          "glyph": "hero",
+          "color": "content",
+          "note": "Title and short introduction.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s21",
+          "label": "What EY is and offers",
+          "glyph": "accordion",
+          "color": "content",
+          "note": "Four questions.",
+          "component": "AEM Accordion",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s22",
+          "label": "Getting in",
+          "glyph": "accordion",
+          "color": "content",
+          "note": "Four questions.",
+          "component": "AEM Accordion",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research",
+            "int-role"
+          ]
+        },
+        {
+          "id": "s23",
+          "label": "What working here is like",
+          "glyph": "accordion",
+          "color": "content",
+          "note": "Five questions.",
+          "component": "AEM Accordion",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s24",
+          "label": "Applying and after",
+          "glyph": "accordion",
+          "color": "content",
+          "note": "Two questions, together with the five entries that are acknowledged here and then routed to local sites.",
+          "component": "AEM Accordion",
+          "flag": "Structured data is a configuration task. The case for it is extraction by AI answer engines rather than rich results in search, which are no longer available to most sites. It should not be presented as delivering search snippets.",
+          "comments": [],
+          "intents": [
+            "int-continue"
+          ]
+        },
+        {
+          "id": "s25",
+          "label": "Still have a question",
+          "glyph": "form",
+          "color": "content",
+          "note": "Talent Community sign up and contact routing.",
+          "component": "",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "s26",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "s2b",
+      "name": "careers.ey.com / SuccessFactors",
+      "parentId": "sc",
+      "order": 5,
+      "note": "The external application system. This is not part of the build and is shown because the candidate journey crosses it.\n\nThree conditions apply. Outbound links must carry market context. The return link currently resolves to an effectively arbitrary market and requires explanation from EY. The loop accounts for 242,466 visits, a quarter of all traffic to the global careers page.\n\nThe job search accepts filters in the URL: country as a two letter ISO code, business area as a plain label, and city. Country and business area can be combined in a single link. An unrecognised value does not produce an error, it returns an empty result set, so every generated link requires checking before release.",
+      "external": true,
+      "blocks": [
+        {
+          "id": "s28",
+          "label": "Job board (SF Recruiting)",
+          "glyph": "search",
+          "color": "external",
+          "note": "The external job board. Accepts country, business area and city filters in the link.",
+          "component": "",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s29",
+          "label": "Application portal (career5)",
+          "glyph": "form",
+          "color": "external",
+          "note": "The external application portal, where candidates complete and submit applications.",
+          "component": "",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "s2a",
+          "label": "Return link, market-aware",
+          "glyph": "linker",
+          "color": "external",
+          "note": "The link returning candidates to the EY website after they leave the application system.",
+          "component": "",
+          "flag": "To be established with EY: what sets this link, why it defaults to the United Kingdom before a role is chosen, and whether it can follow the candidate's own market.",
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "shp1",
+      "name": "Shapers of the future",
+      "parentId": "s1g",
+      "order": 0,
+      "note": "A retained page, not a new one. This is where the people evidence already lives, at /en_gl/careers/shapers-of-the-future. The former People stories page has been retired and its URL now redirects here.\n\nWhat is already on it. Eleven named individuals across eleven markets (United Kingdom, United States, Brazil, Finland, Canada, Australia, South Africa, India, Philippines and Germany), fourteen videos, and Find jobs calls to action. The stories run inline; there are no separate pages behind the individuals. India appears twice, which matters given India is 43 per cent of visitors to the global site.\n\nWhy it sits here. What it's like to work here carries the culture argument; this page carries the proof. The People stories blocks on the homepage and on the culture page should route to it rather than commission new content, which the earlier wireframe assumed was needed.\n\nWhat needs to change. Discovery, not content. The page is not linked from the careers sub navigation and did not appear among the careers links on the global homepage when checked, which is consistent with its predecessor drawing only 3,319 views. The work here is to connect a strong asset into the model, not to build one.",
+      "external": false,
+      "blocks": [
+        {
+          "id": "sh1",
+          "label": "Global header",
+          "glyph": "links",
+          "color": "header",
+          "note": "The existing global header, carried through unchanged.",
+          "component": "Existing global header",
+          "flag": "",
+          "comments": []
+        },
+        {
+          "id": "sh2",
+          "label": "Careers nav",
+          "glyph": "links",
+          "color": "nav",
+          "note": "Sub navigation. This page is not currently in the careers sub navigation, which is the main reason a strong asset goes unseen. Adding it is the single highest value change to this page.",
+          "component": "AEM Sub Navigation",
+          "flag": "Decision required from EY: add Shapers of the future to the careers sub navigation, or route to it prominently from the culture page and homepage instead.",
+          "comments": []
+        },
+        {
+          "id": "sh3",
+          "label": "Hero",
+          "glyph": "hero",
+          "color": "content",
+          "note": "As published: \"Will you shape the future or be shaped by it?\" Retained.",
+          "component": "AEM Hero Banner",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "sh4",
+          "label": "The Shapers proposition",
+          "glyph": "textrows",
+          "color": "content",
+          "note": "The existing introduction, covering what an EY Shaper is and the inclusive culture claim. Retained, with copy reviewed against the Barometer gaps so that it reads as evidence rather than assertion.",
+          "component": "AEM Rich Text",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research"
+          ]
+        },
+        {
+          "id": "sh5",
+          "label": "People stories",
+          "glyph": "people",
+          "color": "content",
+          "note": "Eleven named individuals with country attribution, and fourteen videos. The stories run inline on this page; there are no separate pages behind them. This is the strongest people content in the estate and it is already built.\n\nNo per person template is needed, and the evidence argues against one. The previous generation of individual person pages, 22 of them in the content inventory, recorded zero views and are all marked for deletion. The service line pattern does not transfer here: candidates search by service line, which is why depth per page earns dwell on Parthenon, but they do not search for an individual by name. Keep the stories inline and invest in the card and video module instead of a page template.\n\nBefore the retired pages are deleted, harvest the 22 zero-view person pages from the content inventory. They are marked for deletion but hold further named individuals who could extend this set.",
+          "component": "AEM eycom-tier3-casestudy, as published",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-research",
+            "int-role"
+          ]
+        },
+        {
+          "id": "sh6",
+          "label": "Find jobs",
+          "glyph": "search",
+          "color": "content",
+          "note": "Already present on the page. Keep, and point it at the same market aware search used elsewhere so that a visitor persuaded by a story can act on it without returning to the homepage.",
+          "component": "Existing job search component",
+          "flag": "",
+          "comments": [],
+          "intents": [
+            "int-role",
+            "int-research"
+          ]
+        },
+        {
+          "id": "sh7",
+          "label": "Footer",
+          "glyph": "links",
+          "color": "footer",
+          "note": "The existing global footer, carried through unchanged.",
+          "component": "Existing global footer",
+          "flag": "",
+          "comments": []
+        }
+      ]
+    }
+  ],
+  "personas": [
+    {
+      "id": "int-role",
+      "name": "Find a role",
+      "color": "#8b5cf6",
+      "desc": "High-intent job seekers. 77% of in-page clicks are Find jobs."
+    },
+    {
+      "id": "int-research",
+      "name": "Research the firm",
+      "color": "#f59e0b",
+      "desc": "Exploratory, search-led arrivals deciding whether EY fits before committing."
+    },
+    {
+      "id": "int-continue",
+      "name": "Continue an application",
+      "color": "#10b981",
+      "desc": "The application loop. A quarter of all visits return from SuccessFactors."
+    },
+    {
+      "id": "int-local",
+      "name": "Reach my local market",
+      "color": "#0ea5e9",
+      "desc": "Users who landed on global by default. 195,260 visits to the country selector show them localising by hand."
+    }
+  ],
+  "journeys": [
+    {
+      "id": "jn-role",
+      "personaId": "int-role",
+      "name": "Straight to a role",
+      "goal": "Get to relevant roles and apply, with minimum friction.",
+      "entry": "Search with role intent, or typed ey.com/careers. Natural search is 41% of known-source visits.",
+      "exit": "SuccessFactors application portal. The hand-off must carry market context.",
+      "steps": [
+        {
+          "pageId": "sc",
+          "note": "Clicks Find jobs almost immediately. 77% of in-page clicks."
+        },
+        {
+          "pageId": "sm",
+          "note": "Market-aware search; experienced route takes 50% of dropdown clicks."
+        },
+        {
+          "pageId": "s2b",
+          "note": "Crosses into the job board and applies."
+        }
+      ]
+    },
+    {
+      "id": "jn-research",
+      "personaId": "int-research",
+      "name": "Decide whether EY fits",
+      "goal": "Understand what EY is, what the work is, and what it is like before applying.",
+      "entry": "General or brand search, \"EY careers\". No named role yet.",
+      "exit": "Job search once convinced, or the Talent Community if nothing fits yet.",
+      "steps": [
+        {
+          "pageId": "sc",
+          "note": "Takes the Explore careers path from the hero."
+        },
+        {
+          "pageId": "sv",
+          "note": "Service-line discovery, depth on the Parthenon model."
+        },
+        {
+          "pageId": "s1g",
+          "note": "Culture proof. The Barometer's weakest EVP areas answered here."
+        },
+        {
+          "pageId": "s27",
+          "note": "Their questions in their words, extraction-ready for AI answers too."
+        }
+      ]
+    },
+    {
+      "id": "jn-continue",
+      "personaId": "int-continue",
+      "name": "Back from the application system",
+      "goal": "Resume or check an application, research the firm just applied to, or find another role.",
+      "entry": "SuccessFactors return link. 242,466 visits, a quarter of the page.",
+      "exit": "Status via My EY, more roles in their market, or the Talent Community.",
+      "steps": [
+        {
+          "pageId": "s2b",
+          "note": "Completes or abandons an application."
+        },
+        {
+          "pageId": "s1x",
+          "note": "Lands in a just-applied state instead of the generic homepage."
+        },
+        {
+          "pageId": "s27",
+          "note": "What happens after I apply, answered before they have to ask."
+        }
+      ]
+    },
+    {
+      "id": "jn-local",
+      "personaId": "int-local",
+      "name": "Get to my market",
+      "goal": "Reach their own country's careers site and its roles.",
+      "entry": "Defaulted onto global: typed ey.com/careers, or search resolved to the global page.",
+      "exit": "Local careers site, or a pre-filtered local job search.",
+      "steps": [
+        {
+          "pageId": "sc",
+          "note": "Met by the market router in the first viewport, instead of hunting for the country selector."
+        }
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "id": "fixn1",
+      "pageId": "sc",
+      "blockId": "s4",
+      "fx": 0.5,
+      "fy": 0.5,
+      "text": "Legal question open here",
+      "author": "stephanie",
+      "at": 1786082000000
+    },
+    {
+      "id": "fixn2",
+      "pageId": "sm",
+      "fx": 0.2,
+      "fy": 0.1,
+      "text": "Page-level note",
+      "author": "anon",
+      "at": 1786082100000
+    }
+  ],
+  "members": [
+    {
+      "id": "fixm1",
+      "name": "Stephanie Tan",
+      "color": "#8b5cf6",
+      "at": 1786079000000
+    }
+  ]
+}

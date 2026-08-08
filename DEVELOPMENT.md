@@ -66,7 +66,7 @@ Three rules keep a careless model from destroying work, and they are load-bearin
 2. **Nothing is written until the author has read the change list.** `applyMarkdown` returns the would-be document *and* every change it makes; removals are counted and confirmed separately. The import then goes through `mutate()`, so it is one undo away.
 3. **Unknown values degrade, they do not throw.** An invented glyph or role keeps the old value and adds a warning.
 
-`docToMarkdown` → `applyMarkdown` on the EY document is exactly lossless: 10 pages, 82 blocks, 4 journeys back out with zero reported changes and a deep-equal document. If you change the format, that identity is the test to re-run.
+`docToMarkdown` → `applyMarkdown` on the EY document is exactly lossless: 10 pages, 82 blocks, 4 journeys back out with zero reported changes and a deep-equal document. That identity, the change reporting, and the malformed-input behaviour are enforced by `npm test` (`tests/md.test.ts` against a frozen EY fixture, with a golden file of the export at `tests/golden/`). An intentional format change means updating the golden file deliberately; a surprise diff there is a regression.
 
 **Field values are one line.** A real line break travels as a literal `\n` and comes back as one, because multi-line flags are common. Backticks in a value would close it, so they become apostrophes.
 
