@@ -51,10 +51,17 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
 }) {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [focusedBlock, setFocusedBlock] = useState<string | null>(null);
+  // Which blocks have their copy folded out. Collapsed by default: the page
+  // reads as a stack of components first.
+  const [openBlocks, setOpenBlocks] = useState<Set<string>>(new Set());
+  const toggleBlock = (bid: string) =>
+    setOpenBlocks(s => { const n = new Set(s); if (n.has(bid)) n.delete(bid); else n.add(bid); return n; });
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (flashTimer.current) clearTimeout(flashTimer.current); }, []);
   const revealBlock = (bid: string) => {
-    cardRefs.current[bid]?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Fold the copy out first so the scroll target has its final height.
+    setOpenBlocks(s => new Set(s).add(bid));
+    setTimeout(() => cardRefs.current[bid]?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
     setFocusedBlock(bid);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFocusedBlock(null), 1800);
@@ -86,16 +93,38 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                             value={page.note} onChange={e => setPageNote(page.id, e.target.value)} />
                 : <p className="text-[13.5px] leading-relaxed text-[var(--ink)] whitespace-pre-wrap">{page.note}</p>}
             </div>
-            {page.blocks.map(b => (
+            {page.blocks.map(b => {
+              const c = blockStyle(b, personas);
+              const isOpen = openBlocks.has(b.id);
+              return (
               <div key={b.id} ref={el => { cardRefs.current[b.id] = el; }}
-                   className={`rounded-2xl border bg-[var(--card)] p-5 transition-shadow duration-300 scroll-mt-2 ${
+                   className={`rounded-2xl border overflow-hidden bg-[var(--card)] transition-shadow duration-300 scroll-mt-2 ${
                      focusedBlock === b.id ? "border-[var(--accent)]" : "border-[var(--border)]"}`}
                    style={focusedBlock === b.id ? { boxShadow: "0 0 0 3px var(--accent-soft)" } : undefined}>
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  {canEdit
-                    ? <input className="font-bold text-[15px] bg-transparent outline-none flex-1 min-w-0" style={{ color: COLOR_STYLES[b.color].bg }}
-                             value={b.label} onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
-                    : <h4 className="font-bold text-[15px] flex-1 min-w-0" style={{ color: COLOR_STYLES[b.color].bg }}>{b.label}</h4>}
+                {/* the block itself, as it looks on the canvas; the copy
+                    folds out underneath so the page reads as components
+                    first, detail on demand */}
+                <div className="cursor-pointer select-none" style={{ background: c.bg, color: c.fg }}
+                     onClick={() => toggleBlock(b.id)}>
+                  <div className="flex items-center gap-2 px-4 pt-2.5">
+                    {canEdit
+                      ? <input className="font-bold text-[14px] bg-transparent outline-none flex-1 min-w-0 cursor-pointer focus:cursor-text" style={{ color: c.fg }}
+                               value={b.label} onClick={e => e.stopPropagation()}
+                               onChange={e => patchBlock(page.id, b.id, { label: e.target.value })} />
+                      : <h4 className="font-bold text-[14px] flex-1 min-w-0 truncate">{b.label}</h4>}
+                    {c.extra.map((col, i) => (
+                      <span key={i} className="w-2 h-2 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
+                    ))}
+                    {b.flag && <span title={b.flag} className="shrink-0 text-[10px] bg-red-600 text-white rounded px-1.5 py-0.5 font-bold">!</span>}
+                    {b.comments.length > 0 && <span className="shrink-0 text-[10px] bg-white/25 rounded px-1.5 py-0.5">{b.comments.length}</span>}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                         className="shrink-0 opacity-70" style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 150ms" }}>
+                      <path d="M6 9l6 6 6-6" /></svg>
+                  </div>
+                  <div className="px-4 pb-2 pt-0.5 max-w-[360px] mx-auto"><Glyph id={b.glyph} /></div>
+                </div>
+                {isOpen && <div className="p-5 pt-3.5">
+                <div className="flex justify-end mb-1">
                   <CopyBtn text={[b.label, b.note, b.component && `Component: ${b.component}`, b.flag && `FLAG: ${b.flag}`].filter(Boolean).join("\n")} />
                 </div>
                 {canEdit ? (
@@ -148,8 +177,9 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                   )}
                   <CommentBox me={me} onAdd={t => addComment(page.id, b.id, t)} />
                 </div>
+                </div>}
               </div>
-            ))}
+            );})}
           </div>
           <div className="hidden sm:block w-[240px] shrink-0 border-l border-[var(--border)] overflow-y-auto p-4">
             <div className="rounded-xl bg-[var(--card)] border-2 border-[var(--card-border)] overflow-hidden">

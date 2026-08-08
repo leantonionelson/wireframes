@@ -106,7 +106,9 @@ test.describe("mobile projection", () => {
     await page.getByRole("button", { name: /Home/ }).click();
     await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 
-    // the detail view is editable on mobile: rename the first block
+    // the detail view is editable on mobile: blocks render as wireframe
+    // components with their copy in an accordion — expand, then edit
+    await page.locator(".panel .cursor-pointer").first().click();
     await page.getByPlaceholder("Purpose, user needs, content status…").first()
       .fill("Written on a phone");
     await page.keyboard.press("Escape");
