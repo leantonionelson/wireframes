@@ -17,6 +17,8 @@ import { ExportMenu } from "./editor/ExportMenu";
 import { CursorBadge, MemberPicker } from "./editor/People";
 import { JourneyOverlay, UserJourneysModal } from "./editor/Journeys";
 import { Inspector } from "./editor/Inspector";
+import { MobileSitemap } from "./editor/MobileSitemap";
+import { useMediaQuery } from "./editor/useMediaQuery";
 
 /* The editor orchestrator: canvas, selection, panels and modals. The doc
  * machinery lives in editor/useDoc.ts; every visual surface is its own
@@ -42,6 +44,7 @@ export default function Editor({ projectId }: { projectId: string }) {
   const [aiTab, setAiTab] = useState<"export" | "import">("export");
   const auth = useAuth();
   const canEdit = auth.canEdit;
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const { doc, status, docRef, annPending, mutate, undo, redo, applyLocal, sendAnnotate } = useDoc(projectId, canEdit);
 
   // Hold the loader for at least one full animation cycle, so a fast load
@@ -359,6 +362,14 @@ export default function Editor({ projectId }: { projectId: string }) {
            e.stopPropagation();
            placePin(e);
          }}>
+      {/* The phone gets a projection of the model, not a shrunken canvas:
+          an expandable sitemap list, with the detail view as the page
+          surface. Exactly one of the two mounts, so page/block element ids
+          stay unique for the overlays. */}
+      {isMobile ? (
+        <MobileSitemap doc={doc} canEdit={canEdit} addChild={addChildPage}
+                       open={pid => setDetailPageId(pid)} />
+      ) : (
       <div className="absolute inset-0 overflow-hidden" ref={canvasRef}
            onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}
            style={{ cursor: notesMode ? "crosshair" : drag.current ? "grabbing" : "grab",
@@ -369,13 +380,16 @@ export default function Editor({ projectId }: { projectId: string }) {
           <div className="tree px-10 py-8"><ul>{roots.map(renderPage)}</ul></div>
         </div>
       </div>
+      )}
 
-      {activeJourney && <JourneyOverlay journey={activeJourney} personas={doc.personas} deps={[view, doc, active]} />}
+      {!isMobile && activeJourney && <JourneyOverlay journey={activeJourney} personas={doc.personas} deps={[view, doc, active]} />}
 
       {/* Pinned notes are content, so they are always on screen for everyone.
           Notes mode only adds the crosshair for placing new ones. They render
-          as fixed overlays outside .tree, so PNG export stays clean. */}
-      {doc.notes.length > 0 && (
+          as fixed overlays outside .tree, so PNG export stays clean. On the
+          phone they have no canvas geometry to anchor to, so they surface as
+          counts on the sitemap rows instead. */}
+      {!isMobile && doc.notes.length > 0 && (
         <NotesLayer notes={doc.notes} openId={openNote} setOpenId={setOpenNote} canEdit={canEdit} me={me}
                     patchNote={patchNote} deleteNote={deleteNote} deps={[view, doc, openNote]} />
       )}
@@ -390,7 +404,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       {/* top-left: project identity */}
       <div className="cluster absolute top-4 left-4 z-20 flex items-center gap-2.5 pl-4 pr-3.5 py-2 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg max-w-[46vw]">
         <a href="/" title="All projects" className="flex items-center text-[var(--accent)] shrink-0"><LogoMark /></a>
-        <input className="font-semibold text-[14px] bg-transparent outline-none min-w-0 w-[220px]" value={doc.name} readOnly={!canEdit}
+        <input className="font-semibold text-[14px] bg-transparent outline-none min-w-0 w-[30vw] sm:w-[220px]" value={doc.name} readOnly={!canEdit}
                onChange={e => mutate(d => { d.name = e.target.value; return d; })} />
         <span className={`shrink-0 w-2 h-2 rounded-full ${status === "saved" ? "bg-emerald-400" : status === "saving" || status === "editing" ? "bg-amber-400" : "bg-red-400"}`}
               title={`${status} · last edit ${doc.updatedBy}`} />
@@ -402,7 +416,7 @@ export default function Editor({ projectId }: { projectId: string }) {
           <button className="flex items-center gap-1.5 pl-2.5 pr-3 py-1 rounded-full border border-[var(--border)] text-[11.5px] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"
                   onClick={() => setLoginOpen(true)}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            View only · Log in
+            <span className="hidden sm:inline">View only · Log in</span>
           </button>
         )}
         <MemberPicker members={doc.members} meId={meId} setMeId={chooseMe} addMember={addMember} />
@@ -431,13 +445,13 @@ export default function Editor({ projectId }: { projectId: string }) {
             {ICONS.plus}<span className="hidden sm:inline">Page</span>
           </button>
         )}
-        <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${notesMode ? "bg-amber-400 text-amber-950" : "hover:bg-[var(--hover)]"}`}
+        {!isMobile && <button className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] ${notesMode ? "bg-amber-400 text-amber-950" : "hover:bg-[var(--hover)]"}`}
                 onClick={() => { setNotesMode(m => !m); setOpenNote(null); }}
                 title="Notes: see pinned notes and add your own">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5M9 4h6l1 7 2 2H6l2-2 1-7z"/></svg>
           <span className="hidden sm:inline">Notes{doc.notes.length > 0 ? ` · ${doc.notes.length}` : ""}</span>
-        </button>
-        <ExportMenu canEdit={canEdit} exportPng={exportPng}
+        </button>}
+        <ExportMenu canEdit={canEdit} png={!isMobile} exportPng={exportPng}
                     openAi={tab => { setAiTab(tab); setAiOpen(true); }} />
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]"
                 title="Copy link — anyone with it can view, editing needs the password"
@@ -454,7 +468,7 @@ export default function Editor({ projectId }: { projectId: string }) {
       {/* top-centre: the time controls, kept together and away from the
           make-things toolbar at the bottom */}
       {canEdit && (
-        <div className="cluster absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
+        <div className="cluster absolute top-16 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
           <button className={pillBtn} onClick={undo} title="Undo (Cmd/Ctrl+Z)">{ICONS.undo}</button>
           <button className={`flex items-center gap-2 px-3 py-1 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
                   onClick={() => setPanel(panel === "history" ? null : "history")} title="Version history">
@@ -466,7 +480,7 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {/* bottom-right: intent legend, sits above the zoom cluster.
           Each intent opens User journeys on its own tab. */}
-      {doc.personas.length > 0 && (
+      {!isMobile && doc.personas.length > 0 && (
         <div className="cluster absolute bottom-16 right-4 z-20 flex flex-col items-stretch gap-0.5 p-1 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-lg">
           <span className="text-[9px] uppercase tracking-wide text-[var(--muted)] px-2 pt-0.5 pb-1">Intent</span>
           {doc.personas.map(p => (
@@ -482,15 +496,15 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
       {/* bottom-right: zoom */}
-      <div className="cluster absolute bottom-4 right-4 z-20 flex items-center px-1 py-1 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
+      {!isMobile && <div className="cluster absolute bottom-4 right-4 z-20 flex items-center px-1 py-1 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
         <button className="px-3 py-1 rounded-full hover:bg-[var(--hover)] text-[12px]" onClick={() => setView({ x: 60, y: 84, k: 0.8 })}>Fit</button>
         <button className="px-2.5 py-1 rounded-full hover:bg-[var(--hover)]" onClick={() => setView(v => ({ ...v, k: Math.max(0.25, v.k * 0.9) }))}>−</button>
         <span className="tk w-11 text-center text-[11px] tabular-nums">{Math.round(view.k * 100)}%</span>
         <button className="px-2.5 py-1 rounded-full hover:bg-[var(--hover)]" onClick={() => setView(v => ({ ...v, k: Math.min(2, v.k * 1.1) }))}>+</button>
-      </div>
+      </div>}
 
       {/* floating per-element toolbar */}
-      {selPage && !detailPage && !recording && (
+      {!isMobile && selPage && !detailPage && !recording && (
         <FloatingToolbar targetId={selBlock ? `blk-${selBlock.id}` : `page-${selPage.id}`} deps={[view, doc, sel]}>
           {!canEdit ? (
             <button className={pillBtn} title="Page detail & copy" onClick={() => setDetailPageId(selPage.id)}>{ICONS.detail}</button>
@@ -542,7 +556,7 @@ export default function Editor({ projectId }: { projectId: string }) {
                                   apply={next => { applyImport(next); setAiOpen(false); }}
                                   onClose={() => setAiOpen(false)} />}
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => auth.refresh()} />}
-      {meMember && <CursorBadge member={meMember} />}
+      {!isMobile && meMember && <CursorBadge member={meMember} />}
     </div>
   );
 }

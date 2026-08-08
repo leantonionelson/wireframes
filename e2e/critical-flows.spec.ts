@@ -86,3 +86,32 @@ test("viewer without auth still sees the project read-only", async ({ page }) =>
   await page.goto("/");
   await expect(page.getByText("collaborative sitemaps")).toBeVisible();
 });
+
+test.describe("mobile projection", () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
+  test("sitemap list, page detail and editing on a phone", async ({ page }) => {
+    await page.goto("/");
+    await page.getByPlaceholder("New project name").fill(PROJECT);
+    await page.getByRole("button", { name: "Create" }).click();
+    await page.waitForURL(/\/p\//);
+
+    // the canvas is replaced by the list projection
+    await expect(page.getByRole("button", { name: /Home/ })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator(".tree")).toHaveCount(0);
+
+    // add a page from the list, then open a page into full-screen detail
+    await page.getByRole("button", { name: "+ page", exact: true }).click();
+    await expect(page.getByRole("button", { name: /New page/ })).toBeVisible();
+    await page.getByRole("button", { name: /Home/ }).click();
+    await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+
+    // the detail view is editable on mobile: rename the first block
+    await page.getByPlaceholder("Purpose, user needs, content status…").first()
+      .fill("Written on a phone");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("heading", { name: "Home" })).toHaveCount(0);
+
+    await purgeProjects(page);
+  });
+});

@@ -23,6 +23,8 @@ There is a `.claude/launch.json` config named `scaffolds` (port 3000, autoPort).
 SCAFFOLD_PASSWORD=anything
 ```
 
+**Tests:** `npm test` (vitest: md round trip, migrations, repository contract) and `npm run test:e2e` (Playwright critical flows, including the mobile projection). The e2e suite starts its own dev server on port 3100 with auth disabled, but Next 16 allows only one dev server per directory — stop `next dev` before running it locally. CI runs both.
+
 ## Architecture
 
 **One document per project.** The whole `Doc` (pages, blocks, personas, journeys, notes, members) is a single JSON blob with a `rev` counter. Every write is revision-checked and atomic, which is what makes concurrent editing safe without a CRDT. Keep it that way: splitting pages into separate records would break the concurrency model.

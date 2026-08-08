@@ -3,8 +3,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { ICONS } from "./icons";
 
 /* ---------- export menu ---------- */
-export function ExportMenu({ canEdit, exportPng, openAi }: {
+export function ExportMenu({ canEdit, png = true, exportPng, openAi }: {
   canEdit: boolean;
+  png?: boolean;   // PNG renders the canvas .tree node, which mobile does not mount
   exportPng: () => void;
   openAi: (tab: "export" | "import") => void;
 }) {
@@ -26,13 +27,13 @@ export function ExportMenu({ canEdit, exportPng, openAi }: {
       </button>
       {open && (
         <div className="panel absolute bottom-[46px] left-1/2 -translate-x-1/2 w-[268px] rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-2xl p-1.5 z-40">
-          <button className={item} onClick={() => { setOpen(false); exportPng(); }}>
+          {png && <button className={item} onClick={() => { setOpen(false); exportPng(); }}>
             <span className="text-[var(--muted)] mt-0.5">{ICONS.image}</span>
             <span className="min-w-0">
               <span className="block text-[12.5px] font-semibold">PNG image</span>
               <span className="block text-[11px] text-[var(--muted)] leading-snug">The whole sitemap as a picture</span>
             </span>
-          </button>
+          </button>}
           <button className={item} onClick={() => { setOpen(false); openAi("export"); }}>
             <span className="text-[var(--muted)] mt-0.5">{ICONS.md}</span>
             <span className="min-w-0">

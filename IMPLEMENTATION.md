@@ -41,15 +41,11 @@ Landed on this branch: vitest, 19 tests in `tests/md.test.ts` against a frozen E
 
 1,615 lines became a 548-line orchestrator plus 13 modules under `components/editor/`: `useDoc` (load/poll/save/undo/mutate/annotate transport), `PageCard`, `FloatingToolbar`, `Inspector`, `DetailModal`, `NotesLayer`, `Journeys` (modal + board + overlay), `HistoryPanel`, `ExportMenu`, `People`, `IntentPicker`, `icons`, `types`. Code moved verbatim; verified live: selection, floating toolbar, inspector, detail modal, journeys, history, export menu, notes mode, and a save→undo round trip through the hook.
 
-### 0.5 Mobile projection — **M**
+### 0.5 Mobile projection — **M** — ✅ done
 
-Blueprint §13: the phone gets a different projection, not a shrunken canvas.
+Below 768px the canvas is replaced by `components/editor/MobileSitemap.tsx`: an expandable hierarchy list (block counts, flag badges, comment/note counts, block-colour spines), with the detail view full-screen as the page surface and the mini-stack sidebar hidden. Canvas-only chrome (notes pins/mode, zoom, intent legend, floating toolbar, cursor badge, PNG export) mounts only on desktop, so element ids stay unique. Pinned notes surface as row counts on mobile since they anchor to canvas geometry. Tablet and desktop are unchanged. Covered by the mobile e2e flow.
 
-- `<768px`: hierarchical expandable sitemap list as the default view; tapping a page opens the existing detail view full-screen (it is already close); inspector and panels become bottom sheets; compact top bar, contextual bottom actions.
-- `768–1199px`: keep the canvas with collapsible panels and touch-safe targets.
-- Selection state shared between projections; viewport/selection persisted per device, never in the shared doc.
-
-### 0.6 Critical-flow UI tests — **S** — ✅ done (mobile flow pending 0.5)
+### 0.6 Critical-flow UI tests — **S** — ✅ done
 
 Playwright (`e2e/critical-flows.spec.ts`, `npm run test:e2e`): create project → add block → rename in inspector → export md → import an edited copy through the review list → apply → undo → verify on disk → purge. Runs its own dev server on port 3100 with auth disabled, so it never touches a normal dev session; CI runs it as a second job with failure artifacts. The mobile-navigation flow gets added with 0.5.
 

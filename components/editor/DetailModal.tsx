@@ -60,8 +60,10 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
     flashTimer.current = setTimeout(() => setFocusedBlock(null), 1800);
   };
   return (
-    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
-      <div className="panel w-full max-w-5xl max-h-[90vh] rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
+    // Full-screen on phones (the detail view IS the page surface there),
+    // centred dialog from sm upward.
+    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-0 sm:p-5" onClick={onClose}>
+      <div className="panel w-full h-full sm:h-auto max-w-5xl sm:max-h-[90vh] rounded-none sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
            onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
           <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
@@ -149,7 +151,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
               </div>
             ))}
           </div>
-          <div className="w-[240px] shrink-0 border-l border-[var(--border)] overflow-y-auto p-4">
+          <div className="hidden sm:block w-[240px] shrink-0 border-l border-[var(--border)] overflow-y-auto p-4">
             <div className="rounded-xl bg-[var(--card)] border-2 border-[var(--card-border)] overflow-hidden">
               <div className="text-center font-bold text-[12px] text-[var(--accent)] py-1.5">{page.name}</div>
               <div className="p-1.5 pt-0 flex flex-col gap-1">
