@@ -59,9 +59,9 @@ function MiniStack({ page, personas = [], max }: { page: Page; personas?: Person
         {shown.map(b => {
           const c = blockStyle(b, personas);
           return (
-            <div key={b.id} className="rounded px-1 pt-0.5" style={{ background: c.bg, color: c.fg }}>
-              <div className="text-[8.5px] font-semibold truncate leading-tight">{b.label}</div>
-              <Wireframe ids={b.glyphs} gap={2} />
+            <div key={b.id} className="rounded overflow-hidden" style={{ background: c.bg, color: c.fg }}>
+              <div className="text-[8.5px] font-semibold truncate leading-tight px-1 pt-0.5">{b.label}</div>
+              <div className="px-[2px] pb-[2px]"><Wireframe ids={b.glyphs} gap={1.5} accent={c.bg} /></div>
             </div>
           );
         })}

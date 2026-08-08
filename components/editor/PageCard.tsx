@@ -29,11 +29,14 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
           const c = blockStyle(b, personas);
           const on = sel?.pageId === page.id && sel?.blockId === b.id;
           return (
+            /* The intent colour is the block's tag: a label bar above the
+               wireframe, not a brick behind it. The drawing sits on paper so
+               it reads as layout. */
             <div key={b.id} id={`blk-${b.id}`}
-                 className={`blk rounded px-1.5 pt-1 pb-0.5 cursor-pointer ${on ? "ring-2 ring-[var(--accent)]" : ""}`}
+                 className={`blk rounded-md overflow-hidden cursor-pointer ${on ? "ring-2 ring-[var(--accent)]" : ""}`}
                  style={{ background: c.bg, color: c.fg }}
                  onClick={e => { e.stopPropagation(); setSel({ pageId: page.id, blockId: b.id }); }}>
-              <div className="flex items-center gap-1 text-[10.5px] font-semibold leading-tight">
+              <div className="flex items-center gap-1 text-[10px] font-semibold leading-tight px-1.5 py-[3px]">
                 <span className="truncate">{b.label}</span>
                 {c.extra.map((col, i) => (
                   <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
@@ -41,7 +44,7 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
                 {b.flag && <span title={b.flag} className="ml-auto text-[9px] bg-red-600 text-white rounded px-1">!</span>}
                 {b.comments.length > 0 && <span className="text-[9px] bg-white/25 rounded px-1">{b.comments.length}</span>}
               </div>
-              <Wireframe ids={b.glyphs} />
+              <div className="px-[3px] pb-[3px]"><Wireframe ids={b.glyphs} gap={2} accent={c.bg} /></div>
             </div>
           );
         })}

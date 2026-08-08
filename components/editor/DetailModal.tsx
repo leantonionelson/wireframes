@@ -125,7 +125,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                          className="shrink-0 opacity-70" style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform 150ms" }}>
                       <path d="M6 9l6 6 6-6" /></svg>
                   </div>
-                  <div className="px-4 pb-2.5 pt-0.5"><Wireframe ids={b.glyphs} /></div>
+                  <div className="px-2 pb-2 pt-0.5"><Wireframe ids={b.glyphs} gap={3} accent={c.bg} /></div>
                 </div>
                 {isOpen && <div className="p-5 pt-3.5">
                 <div className="flex items-center justify-end gap-1.5 mb-1">
@@ -215,7 +215,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                           <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
                         ))}
                       </div>
-                      <Wireframe ids={b.glyphs} gap={2} />
+                      <Wireframe ids={b.glyphs} gap={2} accent={blockStyle(b, personas).bg} />
                     </div>
                   );
                 })}
