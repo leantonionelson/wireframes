@@ -1,11 +1,12 @@
 "use client";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { PERSONA_COLORS, blockStyle, readableOn, type Doc, type Journey, type Page, type Persona } from "@/lib/model";
+import { PERSONA_COLORS, blockStyle, type Doc, type Journey, type Page, type Persona } from "@/lib/model";
 import { Glyph } from "@/lib/glyphs";
 import { LogoMark } from "@/components/Theme";
 import { CopyBtn } from "@/components/AiExchange";
 import { ICONS } from "./icons";
 import { useMediaQuery } from "./useMediaQuery";
+import { Button, IconButton, Modal, ModalHeader, PillTabs } from "@/components/ui";
 
 /* ---------- journey overlay: one trace at a time ---------- */
 type Seg = { d: string; color: string };
@@ -114,35 +115,20 @@ export function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, add
   const intent = doc.personas.find(p => p.id === tab) ?? doc.personas[0] ?? null;
   const journeys = intent ? doc.journeys.filter(j => j.personaId === intent.id) : [];
   return (
-    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-0 sm:p-5" onClick={onClose}>
-      <div className="panel w-full h-full sm:h-auto max-w-6xl sm:max-h-[92vh] rounded-none sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
-           onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[var(--border)]">
-          <span className="text-[var(--accent)] shrink-0"><LogoMark size={16} /></span>
-          <h2 className="text-[17px] sm:text-lg font-bold whitespace-nowrap">User journeys</h2>
-          <span className="tk text-[11px] text-[var(--muted)] hidden md:inline">what the user actually came for</span>
-          <button className="ml-auto w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
-        </div>
+    <Modal onClose={onClose} width="max-w-6xl">
+      <>
+        <ModalHeader title={<span className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0"><LogoMark size={16} /></span>User journeys</span>}
+                     subtitle="what the user actually came for" onClose={onClose} />
         {/* intent tabs: pills, scrolling sideways when they outrun the width.
             The selected pill takes the intent's own colour, so the tab row
             doubles as the legend. */}
-        <div className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 border-b border-[var(--border)] overflow-x-auto no-scrollbar">
-          {doc.personas.map(p => {
-            const on = intent?.id === p.id;
-            return (
-              <button key={p.id} onClick={() => setTab(p.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 text-[12.5px] rounded-full border whitespace-nowrap shrink-0 transition-colors ${
-                  on ? "border-transparent font-semibold" : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"}`}
-                style={on ? { background: p.color, color: readableOn(p.color) } : undefined}>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: on ? "currentColor" : p.color }} />{p.name}
-              </button>
-            );
-          })}
-          {canEdit && (
+        <PillTabs className="px-4 sm:px-5 py-2.5 border-b border-[var(--border)]"
+          items={doc.personas.map(p => ({ id: p.id, label: p.name, color: p.color }))}
+          value={intent?.id ?? null} onChange={setTab}
+          after={canEdit ? (
             <button className="w-8 h-8 flex items-center justify-center rounded-full border border-dashed border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shrink-0" title="Add intent"
                     onClick={() => { addPersona("New intent", PERSONA_COLORS[doc.personas.length % PERSONA_COLORS.length], ""); }}>{ICONS.plus}</button>
-          )}
-        </div>
+          ) : undefined} />
         {!intent && <div className="p-10 text-sm text-[var(--muted)]">{canEdit ? "No intents yet. Add one with the + tab." : "No intents defined."}</div>}
         {intent && (
           <div className="flex-1 overflow-y-auto">
@@ -182,8 +168,8 @@ export function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, add
             ))}
             <div className="sticky bottom-0 px-4 sm:px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
               {canEdit && (
-                <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
-                        onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
+                <Button className="border-dashed text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+                        onClick={() => addJourney("New journey", intent.id)}>+ Add journey</Button>
               )}
               {/* zoom belongs to the horizontal strip; the phone stacks instead */}
               <div className="ml-auto hidden md:flex items-center gap-3">
@@ -206,8 +192,8 @@ export function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, add
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 
@@ -324,14 +310,13 @@ function JourneyBoard({ j, color, intentName, pages, personas, canEdit, patchJou
                    onChange={e => patchJourney(j.id, { name: e.target.value })} />
           : <span className="font-semibold text-[13.5px] min-w-0 flex-1 truncate">{j.name}</span>}
         <CopyBtn text={journeyToText(j, intentName, pageName)} />
-        <button className={`text-[11px] px-2.5 py-1 rounded-full border ${active === j.id ? "border-[var(--accent)] text-[var(--accent)]" : "border-[var(--border)] text-[var(--muted)]"}`}
-                title="Trace on canvas" onClick={() => setActive(active === j.id ? null : j.id)}>Trace</button>
+        <Button size="sm" variant={active === j.id ? "primary" : "secondary"} title="Trace on canvas"
+                onClick={() => setActive(active === j.id ? null : j.id)}>Trace</Button>
         {canEdit && (
           <>
-            <button className="text-[11px] px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)]"
-                    title="Close and record by clicking pages" onClick={() => record(j.id)}>Record</button>
-            <button className="text-[var(--muted)] hover:text-red-500"
-                    onClick={() => { if (confirm(`Delete journey "${j.name}"?`)) deleteJourney(j.id); }}>{ICONS.trash}</button>
+            <Button size="sm" title="Close and record by clicking pages" onClick={() => record(j.id)}>Record</Button>
+            <IconButton label="Delete journey" danger
+                        onClick={() => { if (confirm(`Delete journey "${j.name}"?`)) deleteJourney(j.id); }}>{ICONS.trash}</IconButton>
           </>
         )}
       </div>

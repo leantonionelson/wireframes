@@ -6,6 +6,7 @@ import { LogoMark } from "@/components/Theme";
 import { CopyBtn } from "@/components/AiExchange";
 import { ICONS } from "./icons";
 import { IntentPicker } from "./IntentPicker";
+import { Button, IconButton, Modal, ModalHeader } from "@/components/ui";
 
 function pageToText(p: Page): string {
   const lines: string[] = [`# ${p.name}`, ""];
@@ -69,23 +70,17 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
     flashTimer.current = setTimeout(() => setFocusedBlock(null), 1800);
   };
   return (
-    // Full-screen on phones (the detail view IS the page surface there),
-    // centred dialog from sm upward.
-    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-0 sm:p-5" onClick={onClose}>
-      <div className="panel w-full h-full sm:h-auto max-w-5xl sm:max-h-[90vh] rounded-none sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
-           onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
-          <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
-          <h2 className="text-lg font-bold text-[var(--accent)] truncate">{page.name}</h2>
-          <div className="ml-auto flex items-center gap-2">
+    <Modal onClose={onClose} width="max-w-5xl">
+      <>
+        <ModalHeader onClose={onClose}
+          title={<span className="flex items-center gap-2.5 text-[var(--accent)]"><span className="shrink-0"><LogoMark size={16} /></span><span className="truncate">{page.name}</span></span>}
+          actions={<>
             <CopyBtn text={pageToText(page)} label="Copy page" />
             {canEdit && (
-              <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)] hover:text-red-500" title="Delete page and children"
-                      onClick={() => { if (confirm(`Delete "${page.name}" and its children?`)) { delPage(); onClose(); } }}>{ICONS.trash}</button>
+              <IconButton label="Delete page and children" danger
+                          onClick={() => { if (confirm(`Delete "${page.name}" and its children?`)) { delPage(); onClose(); } }}>{ICONS.trash}</IconButton>
             )}
-            <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
-          </div>
-        </div>
+          </>} />
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
@@ -133,8 +128,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                 <div className="flex items-center justify-end gap-1.5 mb-1">
                   <CopyBtn text={[b.label, b.note, b.component && `Component: ${b.component}`, b.flag && `FLAG: ${b.flag}`].filter(Boolean).join("\n")} />
                   {canEdit && (
-                    <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-red-500 hover:bg-[var(--hover)] text-[11px] shrink-0"
-                            title="Delete block" onClick={() => delBlock(b.id)}>{ICONS.trash}<span>Delete</span></button>
+                    <Button size="sm" variant="danger" title="Delete block" onClick={() => delBlock(b.id)}>{ICONS.trash}Delete</Button>
                   )}
                 </div>
                 {canEdit ? (
@@ -191,8 +185,8 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
               </div>
             );})}
             {canEdit && (
-              <button className="w-full rounded-2xl border-2 border-dashed border-[var(--border)] py-3 text-[13px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
-                      onClick={addBlk}>+ block</button>
+              <Button className="w-full border-2 border-dashed py-3 text-[13px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+                      onClick={addBlk}>+ block</Button>
             )}
           </div>
           <div className="hidden sm:block w-[240px] shrink-0 border-l border-[var(--border)] overflow-y-auto p-4">
@@ -230,7 +224,7 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }

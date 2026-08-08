@@ -3,6 +3,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { LogoMark } from "@/components/Theme";
 import { applyMarkdown, docToMarkdown, summarise, type MdChange, type Mode } from "@/lib/md";
 import type { Doc } from "@/lib/model";
+import { Button, Modal, ModalHeader, PillTabs } from "@/components/ui";
 
 /* The Markdown round trip, deliberately without a model of our own.
  *
@@ -107,26 +108,18 @@ export function AiExchangeModal({ mode, doc, canEdit, apply, onClose, initialTab
     await apply(result.doc);
   };
 
-  // Pill tabs, same language as the intent tabs and the rest of the chrome.
-  const tabCls = (t: string) => `px-4 py-1.5 text-[12.5px] rounded-full border whitespace-nowrap shrink-0 transition-colors ${
-    tab === t ? "bg-[var(--accent)] text-white border-transparent font-semibold"
-              : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"}`;
-
   return (
-    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-0 sm:p-5" onClick={onClose}>
-      <div className="panel w-full h-full sm:h-auto max-w-3xl sm:max-h-[92vh] rounded-none sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
-           onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[var(--border)]">
-          <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
-          <h2 className="text-lg font-bold">{create ? "Start from a brief" : "Markdown for AI"}</h2>
-          <span className="tk text-[11px] text-[var(--muted)] hidden md:inline">your AI, not ours</span>
-          <button className="ml-auto w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
-        </div>
+    <Modal onClose={onClose}>
+      <>
+        <ModalHeader onClose={onClose} subtitle="your AI, not ours"
+          title={<span className="flex items-center gap-2.5"><span className="text-[var(--accent)] shrink-0"><LogoMark size={16} /></span>{create ? "Start from a brief" : "Markdown for AI"}</span>} />
 
-        <div className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 border-b border-[var(--border)] overflow-x-auto no-scrollbar">
-          <button className={tabCls("export")} onClick={() => setTab("export")}>{create ? "Get the brief" : "Send it out"}</button>
-          {canEdit && <button className={tabCls("import")} onClick={() => setTab("import")}>{create ? "Build it" : "Bring it back"}</button>}
-        </div>
+        <PillTabs className="px-4 sm:px-5 py-2.5 border-b border-[var(--border)]"
+          value={tab} onChange={t => setTab(t as "export" | "import")}
+          items={[
+            { id: "export", label: create ? "Get the brief" : "Send it out" },
+            ...(canEdit ? [{ id: "import", label: create ? "Build it" : "Bring it back" }] : []),
+          ]} />
 
         {tab === "export" && (
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -155,9 +148,7 @@ export function AiExchangeModal({ mode, doc, canEdit, apply, onClose, initialTab
             </ol>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-[12.5px]" onClick={download}>
-                {ICONS.down} Download {create ? "the brief" : ".md"}
-              </button>
+              <Button variant="primary" onClick={download}>{ICONS.down} Download {create ? "the brief" : ".md"}</Button>
               <CopyBtn text={md} label={create ? "Copy brief" : "Copy file"} onCopy={() => setSent(true)} />
               <span className="tk text-[11px] text-[var(--muted)] ml-auto">
                 {create
@@ -204,10 +195,7 @@ export function AiExchangeModal({ mode, doc, canEdit, apply, onClose, initialTab
         {tab === "import" && canEdit && (
           <div className="flex-1 overflow-y-auto p-6 space-y-3">
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-[var(--border)] text-[12.5px] hover:bg-[var(--hover)]"
-                      onClick={() => fileRef.current?.click()}>
-                {ICONS.up} Choose a .md file
-              </button>
+              <Button onClick={() => fileRef.current?.click()}>{ICONS.up} Choose a .md file</Button>
               <input ref={fileRef} type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" className="hidden"
                      onChange={e => readFile(e.target.files?.[0])} />
               <span className="text-[12px] text-[var(--muted)] truncate">{fileName || "or paste it below"}</span>
@@ -220,10 +208,9 @@ export function AiExchangeModal({ mode, doc, canEdit, apply, onClose, initialTab
                       value={draft} onChange={e => { setDraft(e.target.value); setResult(null); }} />
 
             <div className="flex items-center gap-2">
-              <button className="px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-[12.5px] disabled:opacity-40"
-                      disabled={!draft.trim()} onClick={() => setResult(applyMarkdown(draft, doc))}>
+              <Button variant="primary" disabled={!draft.trim()} onClick={() => setResult(applyMarkdown(draft, doc))}>
                 {create ? "Read it" : "Review changes"}
-              </button>
+              </Button>
               {result && !create && <span className="text-[12.5px] text-[var(--muted)]">{summarise(result.changes)}</span>}
             </div>
 
@@ -232,8 +219,8 @@ export function AiExchangeModal({ mode, doc, canEdit, apply, onClose, initialTab
               : <ImportReview result={result} onApply={commit} />)}
           </div>
         )}
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 
@@ -271,9 +258,7 @@ function ImportReview({ result, onApply }: { result: ReturnType<typeof applyMark
       )}
       <Warnings list={warnings} />
       {doc && changes.length > 0 && (
-        <button className="px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-[12.5px]" onClick={onApply}>
-          Apply {changes.length} change{changes.length === 1 ? "" : "s"}
-        </button>
+        <Button variant="primary" onClick={onApply}>Apply {changes.length} change{changes.length === 1 ? "" : "s"}</Button>
       )}
     </div>
   );
@@ -305,9 +290,7 @@ function CreateReview({ result, busy, onApply }: {
       </p>
       <div className="rounded-2xl border border-[var(--border)] divide-y divide-[var(--border)] max-h-[30vh] overflow-y-auto">{row(null, 0)}</div>
       <Warnings list={warnings} />
-      <button className="px-4 py-1.5 rounded-full bg-[var(--accent)] text-white text-[12.5px] disabled:opacity-50" disabled={!!busy} onClick={onApply}>
-        {busy ?? `Create this scaffold`}
-      </button>
+      <Button variant="primary" disabled={!!busy} onClick={onApply}>{busy ?? "Create this scaffold"}</Button>
     </div>
   );
 }

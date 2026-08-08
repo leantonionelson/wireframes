@@ -88,7 +88,8 @@ Every mutation is enforced server-side. The UI gating is convenience, not securi
 
 ## Conventions
 
-- Pills everywhere; glass/backdrop-blur only on floating chrome, solid `--card` on modals
+- **`components/ui.tsx` holds the primitives** — `Button`, `IconButton`, `PillTabs`, `Modal`, `ModalHeader`, `Cluster`, `Badge`. Compose these rather than hand-rolling another pill. Deliberately not shadcn/Radix: the app already has a complete token language and a small a11y surface, so shadcn would mean adding Radix + CVA + tailwind-merge only to restyle everything back into these tokens. Reach for Radix when a primitive genuinely needs it (focus trapping, listbox semantics), not for looks
+- Pills everywhere; glass/backdrop-blur only on floating chrome, solid `--card` on modals; modals are full-screen sheets below `sm` and centred dialogs above
 - CSS custom-property tokens in `globals.css`, light + dark via `data-theme`
 - No raw scrollbars for structured content — pan/zoom or explicit controls; plain scroll is fine for text
 - Everything editable in place
