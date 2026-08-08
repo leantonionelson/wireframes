@@ -101,6 +101,8 @@ Every mutation is enforced server-side. The UI gating is convenience, not securi
 
 ## Roadmap, in the order I would do it
 
+> Superseded in scope by [IMPLEMENTATION.md](IMPLEMENTATION.md), the phased plan derived from the technical blueprint ([docs/blueprint-v1.md](docs/blueprint-v1.md)). The items below remain accurate as the short list and are absorbed into that plan.
+
 1. **Tenancy + real accounts** — Firebase Auth is the obvious fit and solves it directly. Keep Postgres; Firebase Auth alongside it is a normal architecture. Gate `GET /api/projects` at the same time.
 2. **Images in notes, comments and block writeups** — Firebase **Storage** (not Firestore), URLs in the doc, never binary. Two traps: set bucket **CORS** or `html-to-image` PNG export silently drops the images, and Storage security rules are separate from database rules.
 3. **Coding-agent export** — the highest-value/lowest-effort item, and `lib/md.ts` is now most of the machinery: the emitter already walks the tree and knows every field. A build brief is a third `Mode`, not a new module. The document is already close to a build brief: page tree = routes, blocks = component sequence, glyph = type, `component` = implementation target, `note` = spec, `intents` = who it serves, journeys = flows that must work. **The red flags are the most valuable field**, because they tell an agent what *not* to invent. Output a scaffold (routes, stubs, notes as TODOs), not a finished site.
