@@ -74,3 +74,7 @@ body{font-family:var(--font-geist-sans),-apple-system,BlinkMacSystemFont,sans-se
 @media (prefers-reduced-motion:reduce){
   .scaffold-bar,.scaffold-word{animation:none;opacity:1;transform:none}
 }
+
+/* horizontal tab strips: scroll without a visible bar */
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{scrollbar-width:none}

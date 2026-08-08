@@ -25,7 +25,7 @@ export function HistoryPanel({ projectId, me, close, restore }: {
     if (j.doc) restore(j.doc);
   };
   return (
-    <aside className="panel absolute top-[68px] right-4 bottom-4 w-[340px] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden z-30">
+    <aside className="panel absolute top-[68px] right-4 bottom-4 w-[340px] max-w-[calc(100vw-32px)] bg-[var(--panel)] backdrop-blur-2xl rounded-2xl shadow-2xl border border-[var(--border)] flex flex-col overflow-hidden z-30">
       <div className="flex items-center px-4 py-2.5 border-b border-[var(--border)]">
         <div className="text-sm font-bold text-[var(--accent)]">Version history</div>
         <button className="ml-auto text-[var(--muted)] hover:text-[var(--ink)]" onClick={close}>{ICONS.close}</button>

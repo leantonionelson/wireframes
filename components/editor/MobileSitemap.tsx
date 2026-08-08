@@ -62,7 +62,11 @@ export function MobileSitemap({ doc, open, addChild, canEdit }: {
   };
 
   return (
-    <div className="absolute inset-0 overflow-y-auto px-3 pt-20 pb-28">
+    // Same graph-paper background as the canvas, so mobile still reads as
+    // Scaffolds; static rather than panning, since the list scrolls.
+    <div className="absolute inset-0 overflow-y-auto px-3 pt-20 pb-28"
+         style={{ backgroundImage: "linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px)",
+                  backgroundSize: "24px 24px" }}>
       {kids(null).map(p => row(p, 0))}
       {canEdit && (
         <button className="mt-2 w-full rounded-2xl border-2 border-dashed border-[var(--border)] py-3 text-[13px] text-[var(--muted)] active:bg-[var(--hover)]"

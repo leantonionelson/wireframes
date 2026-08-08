@@ -440,6 +440,14 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {/* bottom-center: tools */}
       <div className="cluster absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
+        {canEdit && isMobile && (
+          <>
+            <button className={pillBtn} onClick={undo} title="Undo">{ICONS.undo}</button>
+            <button className={pillBtn} onClick={() => setPanel(panel === "history" ? null : "history")} title="Version history">{ICONS.clock}</button>
+            <button className={pillBtn} onClick={redo} title="Redo">{ICONS.redo}</button>
+            <span className="w-px h-5 bg-[var(--border)]" />
+          </>
+        )}
         {canEdit && (
           <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-[var(--hover)] text-[13px]" onClick={() => addChildPage(null)} title="Add top-level page">
             {ICONS.plus}<span className="hidden sm:inline">Page</span>
@@ -467,8 +475,8 @@ export default function Editor({ projectId }: { projectId: string }) {
 
       {/* top-centre: the time controls, kept together and away from the
           make-things toolbar at the bottom */}
-      {canEdit && (
-        <div className="cluster absolute top-16 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
+      {canEdit && !isMobile && (
+        <div className="cluster absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1.5 bg-[var(--glass)] backdrop-blur-xl border border-[var(--border)] rounded-full shadow-lg">
           <button className={pillBtn} onClick={undo} title="Undo (Cmd/Ctrl+Z)">{ICONS.undo}</button>
           <button className={`flex items-center gap-2 px-3 py-1 rounded-full text-[13px] ${panel === "history" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--hover)]"}`}
                   onClick={() => setPanel(panel === "history" ? null : "history")} title="Version history">
@@ -544,7 +552,11 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
 
-      {detailPage && <DetailModal page={detailPage} personas={doc.personas} me={me} canEdit={canEdit} addComment={addComment} setPageNote={setPageNote} patchBlock={patchBlock} addBlk={() => addBlock(detailPage.id)} onClose={() => setDetailPageId(null)} />}
+      {detailPage && <DetailModal page={detailPage} personas={doc.personas} me={me} canEdit={canEdit} addComment={addComment} setPageNote={setPageNote} patchBlock={patchBlock}
+        addBlk={() => mutate(d => { d.pages.find(p => p.id === detailPage.id)!.blocks.push(blankBlock()); return d; })}
+        delBlock={bid => deleteBlock(detailPage.id, bid)}
+        delPage={() => deletePage(detailPage.id)}
+        onClose={() => setDetailPageId(null)} />}
       {wsOpen && <UserJourneysModal doc={doc} tab={wsTab} setTab={setWsTab} canEdit={canEdit}
         patchPersona={patchPersona} addPersona={addPersona} deletePersona={deletePersona}
         patchJourney={patchJourney} patchStep={patchStep} addStep={appendStep} removeStep={removeStep}

@@ -1,10 +1,11 @@
 "use client";
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { PERSONA_COLORS, blockStyle, type Doc, type Journey, type Page, type Persona } from "@/lib/model";
+import { PERSONA_COLORS, blockStyle, readableOn, type Doc, type Journey, type Page, type Persona } from "@/lib/model";
 import { Glyph } from "@/lib/glyphs";
 import { LogoMark } from "@/components/Theme";
 import { CopyBtn } from "@/components/AiExchange";
 import { ICONS } from "./icons";
+import { useMediaQuery } from "./useMediaQuery";
 
 /* ---------- journey overlay: one trace at a time ---------- */
 type Seg = { d: string; color: string };
@@ -45,12 +46,16 @@ export function JourneyOverlay({ journey, personas, deps }: { journey: Journey; 
 }
 
 /* ---------- mini wireframe stack ---------- */
-function MiniStack({ page, personas = [] }: { page: Page; personas?: Persona[] }) {
+function MiniStack({ page, personas = [], max }: { page: Page; personas?: Persona[]; max?: number }) {
+  // A journey step is about sequence, not the whole page: cap the preview so
+  // one long page cannot dominate a stacked flow.
+  const shown = max ? page.blocks.slice(0, max) : page.blocks;
+  const hidden = page.blocks.length - shown.length;
   return (
     <div className="rounded-xl bg-[var(--card)] border-2 border-[var(--card-border)] overflow-hidden">
       <div className="text-center font-bold text-[11px] text-[var(--accent)] py-1 px-1 truncate">{page.name}</div>
       <div className="p-1 pt-0 flex flex-col gap-[3px]">
-        {page.blocks.map(b => {
+        {shown.map(b => {
           const c = blockStyle(b, personas);
           return (
             <div key={b.id} className="rounded px-1 pt-0.5" style={{ background: c.bg, color: c.fg }}>
@@ -59,6 +64,9 @@ function MiniStack({ page, personas = [] }: { page: Page; personas?: Persona[] }
             </div>
           );
         })}
+        {hidden > 0 && (
+          <div className="tk text-[8.5px] text-[var(--muted)] text-center py-0.5">+{hidden} more</div>
+        )}
       </div>
     </div>
   );
@@ -106,25 +114,32 @@ export function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, add
   const intent = doc.personas.find(p => p.id === tab) ?? doc.personas[0] ?? null;
   const journeys = intent ? doc.journeys.filter(j => j.personaId === intent.id) : [];
   return (
-    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
-      <div className="panel w-full max-w-6xl max-h-[92vh] rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-0 sm:p-5" onClick={onClose}>
+      <div className="panel w-full h-full sm:h-auto max-w-6xl sm:max-h-[92vh] rounded-none sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
            onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
-          <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
-          <h2 className="text-lg font-bold">User journeys</h2>
-          <span className="tk text-[11px] text-[var(--muted)]">what the user actually came for</span>
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[var(--border)]">
+          <span className="text-[var(--accent)] shrink-0"><LogoMark size={16} /></span>
+          <h2 className="text-[17px] sm:text-lg font-bold whitespace-nowrap">User journeys</h2>
+          <span className="tk text-[11px] text-[var(--muted)] hidden md:inline">what the user actually came for</span>
           <button className="ml-auto w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
         </div>
-        {/* intent tabs */}
-        <div className="flex items-end flex-wrap gap-1 px-5 pt-2.5 border-b border-[var(--border)]">
-          {doc.personas.map(p => (
-            <button key={p.id} onClick={() => setTab(p.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 text-[12.5px] rounded-t-xl border border-b-0 whitespace-nowrap ${intent?.id === p.id ? "bg-[var(--card)] border-[var(--border)] font-semibold" : "border-transparent text-[var(--muted)] hover:text-[var(--ink)]"}`}>
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: p.color }} />{p.name}
-            </button>
-          ))}
+        {/* intent tabs: pills, scrolling sideways when they outrun the width.
+            The selected pill takes the intent's own colour, so the tab row
+            doubles as the legend. */}
+        <div className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 border-b border-[var(--border)] overflow-x-auto no-scrollbar">
+          {doc.personas.map(p => {
+            const on = intent?.id === p.id;
+            return (
+              <button key={p.id} onClick={() => setTab(p.id)}
+                className={`flex items-center gap-2 px-3.5 py-1.5 text-[12.5px] rounded-full border whitespace-nowrap shrink-0 transition-colors ${
+                  on ? "border-transparent font-semibold" : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"}`}
+                style={on ? { background: p.color, color: readableOn(p.color) } : undefined}>
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: on ? "currentColor" : p.color }} />{p.name}
+              </button>
+            );
+          })}
           {canEdit && (
-            <button className="px-3 py-2 text-[13px] text-[var(--muted)] hover:text-[var(--accent)]" title="Add intent"
+            <button className="w-8 h-8 flex items-center justify-center rounded-full border border-dashed border-[var(--border)] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)] shrink-0" title="Add intent"
                     onClick={() => { addPersona("New intent", PERSONA_COLORS[doc.personas.length % PERSONA_COLORS.length], ""); }}>{ICONS.plus}</button>
           )}
         </div>
@@ -132,7 +147,7 @@ export function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, add
         {intent && (
           <div className="flex-1 overflow-y-auto">
             {/* intent header row */}
-            <div className="px-6 py-2.5 border-b border-[var(--border)] flex items-center gap-2">
+            <div className="px-4 sm:px-6 py-2.5 border-b border-[var(--border)] flex items-center gap-2 flex-wrap">
               <span className="w-3 h-3 rounded-full shrink-0" style={{ background: intent.color }} />
               {canEdit
                 ? <input className="font-semibold bg-transparent outline-none text-[14px] min-w-0 flex-1" value={intent.name}
@@ -152,7 +167,7 @@ export function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, add
               )}
             </div>
             {(canEdit || intent.desc) && (
-              <div className="px-6 pb-2 border-b border-[var(--border)]">
+              <div className="px-4 sm:px-6 pb-2 border-b border-[var(--border)]">
                 {canEdit
                   ? <input className="w-full bg-transparent outline-none text-[12px] text-[var(--muted)]" placeholder="Describe this intent: who arrives with it, and the evidence…"
                            value={intent.desc} onChange={e => patchPersona(intent.id, { desc: e.target.value })} />
@@ -165,12 +180,13 @@ export function UserJourneysModal({ doc, tab, setTab, canEdit, patchPersona, add
                 patchJourney={patchJourney} patchStep={patchStep} addStep={addStep} removeStep={removeStep}
                 deleteJourney={deleteJourney} active={active} setActive={setActive} record={record} />
             ))}
-            <div className="sticky bottom-0 px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
+            <div className="sticky bottom-0 px-4 sm:px-5 py-3 border-t border-[var(--border)] bg-[var(--card)] flex items-center gap-2">
               {canEdit && (
                 <button className="px-4 py-1.5 rounded-full border border-dashed border-[var(--border)] text-[12.5px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
                         onClick={() => addJourney("New journey", intent.id)}>+ Add journey</button>
               )}
-              <div className="ml-auto flex items-center gap-3">
+              {/* zoom belongs to the horizontal strip; the phone stacks instead */}
+              <div className="ml-auto hidden md:flex items-center gap-3">
                 {journeys.map(jj => {
                   const zv = zOf(jj.id);
                   const set = setZFor(jj.id);
@@ -234,9 +250,75 @@ function JourneyBoard({ j, color, intentName, pages, personas, canEdit, patchJou
     setZ({ x: 0, k: Math.min(1, Math.max(0.4, cw / w)) });
   };
   useEffect(() => { if (z.k === -1) fitStrip(); }, [z.k]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Natural (unscaled) height of the strip, so the wrapper can follow it.
+  const [rowH, setRowH] = useState(0);
+  useLayoutEffect(() => {
+    const el = rowRef.current;
+    if (!el) return;
+    const measure = () => setRowH(el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [j.steps.length, canEdit]);
+
+  // A journey is a sequence, and a phone is a column: below sm the strip
+  // becomes a vertical flow with no pan or zoom, so every step is readable
+  // at full width instead of clipped by a draggable row.
+  const stack = useMediaQuery("(max-width: 767px)");
+
+  const entryExit = (kind: "Entry" | "Exit", value: string, set: (v: string) => void, placeholder: string) => (
+    <div className={`${stack ? "w-full" : "w-[180px] shrink-0"} rounded-2xl border-2 border-dashed p-3`} style={{ borderColor: color }}>
+      <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>{kind}</div>
+      {canEdit
+        ? <textarea className={`autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug ${stack ? "min-h-[52px]" : "min-h-[84px]"}`}
+                    placeholder={placeholder} value={value} onChange={e => set(e.target.value)} />
+        : <p className={`text-[12.5px] leading-snug whitespace-pre-wrap ${stack ? "" : "min-h-[84px]"}`}>{value}</p>}
+    </div>
+  );
+
+  const stepCard = (st: { pageId: string; note: string }, i: number) => {
+    const p = pageOf(st.pageId);
+    return (
+      <div className={stack ? "w-full flex gap-3" : "w-[200px] shrink-0"}>
+        {stack && <div className="w-[86px] shrink-0">
+          {p ? <MiniStack page={p} personas={personas} max={5} /> : <div className="text-[10px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-2">deleted</div>}
+        </div>}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: color }}>{i + 1}</span>
+            <span className="text-[12.5px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
+            {canEdit && <button className="text-[var(--muted)] hover:text-red-500 text-[15px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>}
+          </div>
+          {!stack && (p
+            ? <MiniStack page={p} personas={personas} />
+            : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>)}
+          {canEdit
+            ? <textarea className="autogrow mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 min-h-[54px]"
+                        placeholder="What do they do here? Evidence?"
+                        value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
+            : st.note && <p className="mt-1.5 w-full text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 whitespace-pre-wrap">{st.note}</p>}
+        </div>
+      </div>
+    );
+  };
+
+  const addStepCard = (
+    <div className={`${stack ? "w-full" : "w-[180px] shrink-0"} rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch`}>
+      <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
+      <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
+              value="" onChange={e => { if (e.target.value) addStep(j.id, e.target.value); }}>
+        <option value="">choose page…</option>
+        {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+      </select>
+      {!stack && <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>}
+    </div>
+  );
+
   return (
     <div className="border-b border-[var(--border)] bg-[var(--card)]">
-      <div className="px-6 py-2.5 flex items-center gap-2">
+      <div className="px-4 sm:px-6 py-2.5 flex items-center gap-2 flex-wrap">
         {canEdit
           ? <input className="font-semibold bg-transparent outline-none text-[13.5px] min-w-0 flex-1" value={j.name}
                    onChange={e => patchJourney(j.id, { name: e.target.value })} />
@@ -254,75 +336,64 @@ function JourneyBoard({ j, color, intentName, pages, personas, canEdit, patchJou
         )}
       </div>
       {(canEdit || j.goal) && (
-        <div className="px-6 pb-2 flex items-center gap-3">
+        <div className="px-4 sm:px-6 pb-2 flex items-baseline gap-2 sm:gap-3">
           <span className="tk text-[10px] uppercase tracking-widest text-[var(--muted)] shrink-0">Goal</span>
           {canEdit
-            ? <input className="flex-1 bg-transparent outline-none text-[13px] border-b border-transparent focus:border-[var(--border)]"
-                     placeholder="What is this intent trying to achieve?"
-                     value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
-            : <span className="flex-1 text-[13px]">{j.goal}</span>}
+            ? (stack
+                ? <textarea className="autogrow flex-1 min-w-0 bg-transparent outline-none text-[13px] leading-snug min-h-[20px] resize-none"
+                            placeholder="What is this intent trying to achieve?"
+                            value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />
+                : <input className="flex-1 min-w-0 bg-transparent outline-none text-[13px] border-b border-transparent focus:border-[var(--border)]"
+                         placeholder="What is this intent trying to achieve?"
+                         value={j.goal} onChange={e => patchJourney(j.id, { goal: e.target.value })} />)
+            : <span className="flex-1 min-w-0 text-[13px]">{j.goal}</span>}
         </div>
       )}
+
+      {stack ? (
+        /* vertical flow: entry, numbered steps, exit, each full width */
+        <div className="px-4 pb-4 pt-1 flex flex-col items-stretch gap-1.5">
+          {entryExit("Entry", j.entry, v => patchJourney(j.id, { entry: v }), "Where does this journey begin?")}
+          {j.steps.map((st, i) => (
+            <React.Fragment key={i}>
+              <DownArrow color={color} />
+              {stepCard(st, i)}
+            </React.Fragment>
+          ))}
+          {canEdit && <><DownArrow color={color} />{addStepCard}</>}
+          <DownArrow color={color} />
+          {entryExit("Exit", j.exit, v => patchJourney(j.id, { exit: v }), "Where does it end?")}
+        </div>
+      ) : (
       <div className="relative">
-        <div ref={wrapRef} className="overflow-hidden select-none" style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
+        {/* The row is scaled with a transform, which does not change its
+            layout box, so the wrapper has to be told how tall the scaled
+            content actually is or the cards get clipped. */}
+        <div ref={wrapRef} className="overflow-hidden select-none" style={{ cursor: dragRef.current ? "grabbing" : "grab", height: rowH ? rowH * z.k : undefined }}
              onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp}>
           <div ref={rowRef} className="flex items-start gap-1 p-5 pt-2 w-max"
                style={{ transform: `translateX(${z.x}px) scale(${z.k})`, transformOrigin: "0 0" }}>
-            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
-              <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Entry</div>
-              {canEdit
-                ? <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
-                            placeholder="Where does this journey begin?"
-                            value={j.entry} onChange={e => patchJourney(j.id, { entry: e.target.value })} />
-                : <p className="text-[12.5px] leading-snug min-h-[84px] whitespace-pre-wrap">{j.entry}</p>}
-            </div>
+            {entryExit("Entry", j.entry, v => patchJourney(j.id, { entry: v }), "Where does this journey begin?")}
             <Arrow color={color} />
-            {j.steps.map((st, i) => {
-              const p = pageOf(st.pageId);
-              return (
-                <React.Fragment key={i}>
-                  <div className="w-[200px] shrink-0">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className="w-[18px] h-[18px] rounded-full text-[10px] font-bold text-white flex items-center justify-center shrink-0" style={{ background: color }}>{i + 1}</span>
-                      <span className="text-[12px] font-semibold truncate flex-1">{pageName(st.pageId)}</span>
-                      {canEdit && <button className="text-[var(--muted)] hover:text-red-500 text-[13px] px-1" title="Remove step" onClick={() => removeStep(j.id, i)}>×</button>}
-                    </div>
-                    {p ? <MiniStack page={p} personas={personas} /> : <div className="text-[11px] text-[var(--muted)] border border-dashed border-[var(--border)] rounded-xl p-3">page deleted</div>}
-                    {canEdit
-                      ? <textarea className="autogrow mt-1.5 w-full bg-transparent text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 min-h-[54px]"
-                                  placeholder="What do they do here? Evidence?"
-                                  value={st.note} onChange={e => patchStep(j.id, i, e.target.value)} />
-                      : st.note && <p className="mt-1.5 w-full text-[11.5px] leading-snug text-[var(--ink)] border border-[var(--border)] rounded-lg p-1.5 whitespace-pre-wrap">{st.note}</p>}
-                  </div>
-                  <Arrow color={color} />
-                </React.Fragment>
-              );
-            })}
-            {canEdit && (
-              <>
-                <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed border-[var(--border)] p-3 flex flex-col gap-2 items-stretch">
-                  <div className="tk text-[10px] uppercase tracking-widest text-[var(--muted)]">Add step</div>
-                  <select className="border border-[var(--border)] rounded-lg px-2 py-1.5 bg-transparent text-[12px] w-full"
-                          value="" onChange={e => { if (e.target.value) addStep(j.id, e.target.value); }}>
-                    <option value="">choose page…</option>
-                    {pages.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <p className="tk text-[9.5px] text-[var(--muted)]">or Record and click pages on the canvas</p>
-                </div>
+            {j.steps.map((st, i) => (
+              <React.Fragment key={i}>
+                {stepCard(st, i)}
                 <Arrow color={color} />
-              </>
-            )}
-            <div className="w-[180px] shrink-0 rounded-2xl border-2 border-dashed p-3" style={{ borderColor: color }}>
-              <div className="tk text-[10px] uppercase tracking-widest mb-1.5" style={{ color }}>Exit</div>
-              {canEdit
-                ? <textarea className="autogrow w-full bg-transparent outline-none text-[12.5px] leading-snug min-h-[84px]"
-                            placeholder="Where does it end?"
-                            value={j.exit} onChange={e => patchJourney(j.id, { exit: e.target.value })} />
-                : <p className="text-[12.5px] leading-snug min-h-[84px] whitespace-pre-wrap">{j.exit}</p>}
-            </div>
+              </React.Fragment>
+            ))}
+            {canEdit && <>{addStepCard}<Arrow color={color} /></>}
+            {entryExit("Exit", j.exit, v => patchJourney(j.id, { exit: v }), "Where does it end?")}
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
+
+const DownArrow = ({ color }: { color: string }) => (
+  <svg width="16" height="22" viewBox="0 0 16 22" className="shrink-0 self-center" aria-hidden="true">
+    <line x1="8" y1="1" x2="8" y2="15" stroke={color} strokeWidth="2" strokeDasharray="5 4" />
+    <path d="M3 14l5 6 5-6" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);

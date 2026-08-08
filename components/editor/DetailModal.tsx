@@ -38,7 +38,7 @@ function CommentBox({ me, onAdd }: { me: string; onAdd: (text: string) => void }
 }
 
 /* ---------- read & copy detail modal ---------- */
-export function DetailModal({ page, personas, me, canEdit, addComment, setPageNote, patchBlock, addBlk, onClose }: {
+export function DetailModal({ page, personas, me, canEdit, addComment, setPageNote, patchBlock, addBlk, delBlock, delPage, onClose }: {
   page: Page;
   personas: Persona[];
   me: string;
@@ -47,6 +47,8 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
   setPageNote: (pid: string, n: string) => void;
   patchBlock: (pid: string, bid: string, patch: Partial<Block>) => void;
   addBlk: () => void;
+  delBlock: (bid: string) => void;
+  delPage: () => void;
   onClose: () => void;
 }) {
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -77,6 +79,10 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
           <h2 className="text-lg font-bold text-[var(--accent)] truncate">{page.name}</h2>
           <div className="ml-auto flex items-center gap-2">
             <CopyBtn text={pageToText(page)} label="Copy page" />
+            {canEdit && (
+              <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)] hover:text-red-500" title="Delete page and children"
+                      onClick={() => { if (confirm(`Delete "${page.name}" and its children?`)) { delPage(); onClose(); } }}>{ICONS.trash}</button>
+            )}
             <button className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
           </div>
         </div>
@@ -124,8 +130,12 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                   <div className="px-4 pb-2 pt-0.5 max-w-[360px] mx-auto"><Glyph id={b.glyph} /></div>
                 </div>
                 {isOpen && <div className="p-5 pt-3.5">
-                <div className="flex justify-end mb-1">
+                <div className="flex items-center justify-end gap-1.5 mb-1">
                   <CopyBtn text={[b.label, b.note, b.component && `Component: ${b.component}`, b.flag && `FLAG: ${b.flag}`].filter(Boolean).join("\n")} />
+                  {canEdit && (
+                    <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-red-500 hover:bg-[var(--hover)] text-[11px] shrink-0"
+                            title="Delete block" onClick={() => delBlock(b.id)}>{ICONS.trash}<span>Delete</span></button>
+                  )}
                 </div>
                 {canEdit ? (
                   <>
@@ -180,6 +190,10 @@ export function DetailModal({ page, personas, me, canEdit, addComment, setPageNo
                 </div>}
               </div>
             );})}
+            {canEdit && (
+              <button className="w-full rounded-2xl border-2 border-dashed border-[var(--border)] py-3 text-[13px] text-[var(--muted)] hover:text-[var(--accent)] hover:border-[var(--accent)]"
+                      onClick={addBlk}>+ block</button>
+            )}
           </div>
           <div className="hidden sm:block w-[240px] shrink-0 border-l border-[var(--border)] overflow-y-auto p-4">
             <div className="rounded-xl bg-[var(--card)] border-2 border-[var(--card-border)] overflow-hidden">

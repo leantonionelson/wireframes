@@ -107,21 +107,23 @@ export function AiExchangeModal({ mode, doc, canEdit, apply, onClose, initialTab
     await apply(result.doc);
   };
 
-  const tabCls = (t: string) => `px-4 py-2 text-[12.5px] rounded-t-xl border border-b-0 ${
-    tab === t ? "bg-[var(--card)] border-[var(--border)] font-semibold" : "border-transparent text-[var(--muted)] hover:text-[var(--ink)]"}`;
+  // Pill tabs, same language as the intent tabs and the rest of the chrome.
+  const tabCls = (t: string) => `px-4 py-1.5 text-[12.5px] rounded-full border whitespace-nowrap shrink-0 transition-colors ${
+    tab === t ? "bg-[var(--accent)] text-white border-transparent font-semibold"
+              : "border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)]"}`;
 
   return (
-    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-5" onClick={onClose}>
-      <div className="panel w-full max-w-3xl max-h-[92vh] rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
+    <div className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm flex items-center justify-center p-0 sm:p-5" onClick={onClose}>
+      <div className="panel w-full h-full sm:h-auto max-w-3xl sm:max-h-[92vh] rounded-none sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-2xl flex flex-col overflow-hidden"
            onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[var(--border)]">
+        <div className="flex items-center gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[var(--border)]">
           <span className="text-[var(--accent)]"><LogoMark size={16} /></span>
           <h2 className="text-lg font-bold">{create ? "Start from a brief" : "Markdown for AI"}</h2>
-          <span className="tk text-[11px] text-[var(--muted)] hidden sm:inline">your AI, not ours</span>
+          <span className="tk text-[11px] text-[var(--muted)] hidden md:inline">your AI, not ours</span>
           <button className="ml-auto w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--hover)] text-[var(--muted)]" onClick={onClose}>{ICONS.close}</button>
         </div>
 
-        <div className="flex items-end gap-1 px-5 pt-2.5 border-b border-[var(--border)]">
+        <div className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 border-b border-[var(--border)] overflow-x-auto no-scrollbar">
           <button className={tabCls("export")} onClick={() => setTab("export")}>{create ? "Get the brief" : "Send it out"}</button>
           {canEdit && <button className={tabCls("import")} onClick={() => setTab("import")}>{create ? "Build it" : "Bring it back"}</button>}
         </div>
