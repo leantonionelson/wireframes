@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { normDoc, type Comment, type Member, type PinNote } from "@/lib/model";
 import { readProject, saveProject } from "@/lib/store";
 import { isAuthed } from "@/lib/auth";
+import { ANNOTATION_TEXT_MAX, overRateLimit } from "@/lib/limits";
 
 // The annotation layer (pinned notes + block comments) is open to viewers:
 // feedback from people without the edit password is the point. Everything
@@ -23,6 +24,19 @@ export async function POST(req: NextRequest) {
     const body = await req.json() as { projectId: string } & Op;
     if (!body.projectId) return NextResponse.json({ error: "projectId required" }, { status: 400, headers: noStore });
     const authed = isAuthed(req);
+
+    // This endpoint is open to viewers by design; throttle it and bound the
+    // free-text fields so an unattended script cannot balloon the document.
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+    if (!authed && overRateLimit(`ann:${ip}`)) {
+      return NextResponse.json({ error: "slow down" }, { status: 429, headers: noStore });
+    }
+    const text = body.op === "note-add" ? body.note.text
+               : body.op === "note-patch" ? body.text
+               : body.op === "comment-add" ? body.comment.text : "";
+    if ((text ?? "").length > ANNOTATION_TEXT_MAX) {
+      return NextResponse.json({ error: "text too long" }, { status: 413, headers: noStore });
+    }
 
     for (let attempt = 0; attempt < 3; attempt++) {
       const raw = await readProject(body.projectId);

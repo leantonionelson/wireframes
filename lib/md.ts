@@ -17,6 +17,7 @@
  */
 
 import { GLYPHS, GLYPH_GROUPS } from "./glyphs";
+import { MD_IMPORT_MAX_BYTES } from "./limits";
 import { COLOR_STYLES, PERSONA_COLORS, SCHEMA_VERSION, uid,
   type Block, type ColorRole, type Doc, type GlyphId, type Journey, type Page, type Persona } from "./model";
 
@@ -400,6 +401,14 @@ export function applyMarkdown(md: string, base: Doc): MdImport {
   const changes: MdChange[] = [];
   const warnings: string[] = [];
   const errors: string[] = [];
+
+  // A real export of a large project is well under 1 MB; anything bigger is
+  // not a scaffold file and gets refused before any parsing happens.
+  if (md.length > MD_IMPORT_MAX_BYTES) {
+    errors.push(`This file is ${Math.round(md.length / 1024)} KB, which is too large to be a scaffold export. The limit is ${Math.round(MD_IMPORT_MAX_BYTES / 1024)} KB.`);
+    return { doc: null, changes, warnings, errors };
+  }
+
   const P = parseMarkdown(md);
 
   P.ignored.forEach(h => warnings.push(`Heading "${h}" is at the wrong level for that section and was ignored. Blocks belong under a page in the Pages section.`));

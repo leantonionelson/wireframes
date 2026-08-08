@@ -81,7 +81,7 @@ One shared password in `SCAFFOLD_PASSWORD` (set on Netlify via the CLI). The coo
 
 Every mutation is enforced server-side. The UI gating is convenience, not security.
 
-**Known gap:** `GET /api/projects` is not gated, so anyone can list every project. Fine for one client, not fine for two. There is **no tenancy at all** — no `userId`, `ownerId` or `workspace` anywhere. This is the blocker before any paid or multi-client use.
+**Known gap:** there is **no tenancy at all** — no `userId`, `ownerId` or `workspace` anywhere. This is the blocker before any paid or multi-client use (IMPLEMENTATION.md phase 1). Interim mitigations: set `SCAFFOLD_PRIVATE_LISTING` to make `GET /api/projects` return an empty list to non-editors (project URLs keep working), and `/api/annotate` is rate-limited with bounded text fields (`lib/limits.ts`).
 
 ## Conventions
 

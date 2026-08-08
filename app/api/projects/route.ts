@@ -6,8 +6,16 @@ export const dynamic = "force-dynamic";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const fail = (e: any) => NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
 
-export async function GET() {
-  try { return NextResponse.json({ projects: await listProjects() }); }
+export async function GET(req: NextRequest) {
+  try {
+    // Interim gate until real tenancy (IMPLEMENTATION.md phase 1): with
+    // SCAFFOLD_PRIVATE_LISTING set, only editors can enumerate projects.
+    // Individual project URLs keep working for viewers either way.
+    if (process.env.SCAFFOLD_PRIVATE_LISTING && !isAuthed(req)) {
+      return NextResponse.json({ projects: [] });
+    }
+    return NextResponse.json({ projects: await listProjects() });
+  }
   catch (e) { return fail(e); }
 }
 

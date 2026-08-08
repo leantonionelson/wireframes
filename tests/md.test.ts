@@ -241,3 +241,12 @@ describe("create mode", () => {
       .toEqual([r.doc!.pages[0].id, prog.id]);
   });
 });
+
+describe("import limits", () => {
+  it("refuses oversized input before parsing", () => {
+    const doc = eyDoc();
+    const r = applyMarkdown("#".repeat(2 * 1024 * 1024 + 1), doc);
+    expect(r.doc).toBeNull();
+    expect(r.errors[0]).toMatch(/too large/);
+  });
+});

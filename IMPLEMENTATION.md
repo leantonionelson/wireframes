@@ -58,11 +58,9 @@ Blueprint §13: the phone gets a different projection, not a shrunken canvas.
 
 Playwright over the dev server: create project, edit block, export md, import md with review, undo, mobile sitemap navigation. These are the flows every later phase can break.
 
-### 0.7 Small hardenings — **S**
+### 0.7 Small hardenings — **S** — ✅ done
 
-- Import size/shape limits on `applyMarkdown` input.
-- Rate-limit `POST /api/annotate` (it is deliberately open).
-- The projects-list gap gets properly fixed by tenancy in phase 1; interim: an env flag to require auth for listing.
+`lib/limits.ts`: 2 MB cap on `applyMarkdown` input (refused before parsing, tested), 10k-char bound on annotation text (413), best-effort per-IP sliding-window rate limit on `/api/annotate` (429, verified live), and a `SCAFFOLD_PRIVATE_LISTING` env flag that hides the project list from non-editors until phase-1 tenancy replaces it.
 
 ---
 
