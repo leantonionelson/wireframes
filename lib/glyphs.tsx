@@ -3,29 +3,35 @@ import type { GlyphId } from "./model";
 
 /* Wireframe elements: schematic line drawings on the block's own colour.
  *
- * The idiom is deliberately technical rather than decorative. Everything is
- * drawn in currentColor - which is the block's foreground on its intent
- * colour - at three weights, with one uniform stroke and one radius scale:
+ * Octopus idiom — one thin solid stroke throughout. Hierarchy is arrangement
+ * and opacity, never stroke weight. Strokes use non-scaling-stroke so they stay
+ * ~1px on screen at any block width (scaled strokes look thick/messy).
  *
- *   outline   thin stroked box, the container a thing sits in
- *   line      a run of copy, or a rule
- *   solid     the few things a visitor acts on, or an active state
+ * Spacing is one system:
  *
- * No fills beyond those, no shadows, no illustration. What varies between
- * elements is the *arrangement* and the *height*: a notice bar is 10 units
- * tall on the 72-wide canvas and a hero is 32, so a stack of blocks reads
- * with the rhythm of a real page instead of as a column of equal icons.
+ *   I   = 4   inset on every side of every SVG
+ *   GAP = 6   space between sibling parts (cards, columns, rows)
+ *   LH  = 3.2 body-copy line pitch
+ *   CSS       uniform pad around label + drawing; extra air above the title
  *
- * Content lives in x:5..67. */
+ * Content occupies x:I..72-I and y:I..h-I. Height = content + 2I. */
 
-const M = 6;              // side margin
-const W = 72 - M * 2;     // content width, 62
+const I = 4;
+const M = I;
+const W = 72 - I * 2;
+const GAP = 6;
+const LH = 3.2;
+const SW = 1.1;           // screen px via non-scaling-stroke
+
+/** Uniform pad inside a coloured block — label and drawing share it. */
+export const BLOCK_GLYPH_PAD = "px-3 pb-3";
+export const BLOCK_LABEL_PAD = "px-3 pt-3 pb-2";
+
+const ve = { vectorEffect: "non-scaling-stroke" as const };
 
 const G = (h: number, children: React.ReactNode) => (
-  // No height attribute: with a viewBox and width 100%, the element takes its
-  // intrinsic ratio and the drawing fills the width it is given.
   <svg viewBox={`0 0 72 ${h}`} width="100%" fill="none" stroke="currentColor"
-       strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+       strokeWidth={SW} strokeLinecap="butt" strokeLinejoin="miter" aria-hidden="true"
        style={{ display: "block", height: "auto" }}>
     {children}
   </svg>
@@ -33,50 +39,47 @@ const G = (h: number, children: React.ReactNode) => (
 
 /* ---------- primitives ---------- */
 
-/** Stroked container: a card, a field, a region. */
-const box = (x: number, y: number, w: number, h: number, r = 1.5, o = 0.5) => (
-  <rect x={x} y={y} width={w} height={h} rx={r} opacity={o} />
+const box = (x: number, y: number, w: number, h: number, r = 1, o = 0.55) => (
+  <rect x={x} y={y} width={w} height={h} rx={r} opacity={o} style={ve} />
 );
-/** Barely-there surface, for areas that are filled rather than outlined. */
-const soft = (x: number, y: number, w: number, h: number, r = 1.5, o = 0.16) => (
+/** Active / CTA mark — the only filled shape. */
+const solid = (x: number, y: number, w: number, h: number, r = 1, o = 0.85) => (
   <rect x={x} y={y} width={w} height={h} rx={r} fill="currentColor" stroke="none" opacity={o} />
 );
-/** Solid mark: buttons, the active tab, the selected state. */
-const solid = (x: number, y: number, w: number, h: number, r = 1.5, o = 0.92) => (
-  <rect x={x} y={y} width={w} height={h} rx={r} fill="currentColor" stroke="none" opacity={o} />
+/** A copy line. Same weight always; length + opacity carry hierarchy. */
+const line = (x: number, y: number, w: number, o = 0.55) => (
+  <line x1={x} y1={y} x2={x + w} y2={y} opacity={o} style={ve} />
 );
-/** A line of copy. Heavier and shorter reads as a heading. */
-const line = (x: number, y: number, w: number, o = 0.62, sw = 1.1) => (
-  <line x1={x} y1={y} x2={x + w} y2={y} opacity={o} strokeWidth={sw} />
-);
-/** A run of copy lines, ragged at the end like real text. */
-const para = (x: number, y: number, w: number, rows: number, gap = 3.8, o = 0.5) => (
+const head = (x: number, y: number, w: number) => line(x, y, w, 0.8);
+const para = (x: number, y: number, w: number, rows: number, gap = LH, o = 0.45) => (
   <g>{Array.from({ length: rows }, (_, i) => (
-    <line key={i} x1={x} y1={y + i * gap} x2={x + (i === rows - 1 ? w * 0.6 : w)} y2={y + i * gap}
-          opacity={o} strokeWidth="1.1" />
+    <line key={i} x1={x} y1={y + i * gap} x2={x + (i === rows - 1 ? w * 0.55 : w)} y2={y + i * gap}
+          opacity={o} style={ve} />
   ))}</g>
 );
-const dot = (cx: number, cy: number, r: number, o = 0.8) => (
+const dot = (cx: number, cy: number, r: number, o = 0.75) => (
   <circle cx={cx} cy={cy} r={r} fill="currentColor" stroke="none" opacity={o} />
 );
-const ring = (cx: number, cy: number, r: number, o = 0.5) => <circle cx={cx} cy={cy} r={r} opacity={o} />;
-/** Picture mark: a horizon inside a frame, drawn not filled. */
-const pic = (x: number, y: number, w: number, h: number, r = 1.5) => (
+const ring = (cx: number, cy: number, r: number, o = 0.55) => (
+  <circle cx={cx} cy={cy} r={r} opacity={o} style={ve} />
+);
+/** Picture: frame + simple mountain mark. */
+const pic = (x: number, y: number, w: number, h: number, r = 1) => (
   <g>
-    {box(x, y, w, h, r, 0.42)}
-    <circle cx={x + w * 0.26} cy={y + h * 0.3} r={Math.min(w, h) * 0.08} opacity="0.55" />
-    <path d={`M${x + w * 0.1} ${y + h * 0.8} L${x + w * 0.36} ${y + h * 0.5} L${x + w * 0.55} ${y + h * 0.66} L${x + w * 0.7} ${y + h * 0.54} L${x + w * 0.9} ${y + h * 0.8}`}
-          opacity="0.55" />
+    {box(x, y, w, h, r, 0.5)}
+    <circle cx={x + w * 0.28} cy={y + h * 0.32} r={Math.min(w, h) * 0.06} opacity="0.5" style={ve} />
+    <path d={`M${x + w * 0.12} ${y + h * 0.78} L${x + w * 0.38} ${y + h * 0.48} L${x + w * 0.55} ${y + h * 0.64} L${x + w * 0.72} ${y + h * 0.5} L${x + w * 0.9} ${y + h * 0.78}`}
+          opacity="0.5" style={ve} />
   </g>
 );
-const chevL = (x: number, y: number, s = 1.8, o = 0.6) => (
-  <path d={`M${x + s} ${y - s} L${x} ${y} L${x + s} ${y + s}`} opacity={o} />
+const chevL = (x: number, y: number, s = 1.4, o = 0.55) => (
+  <path d={`M${x + s} ${y - s} L${x} ${y} L${x + s} ${y + s}`} opacity={o} style={ve} />
 );
-const chevR = (x: number, y: number, s = 1.8, o = 0.6) => (
-  <path d={`M${x} ${y - s} L${x + s} ${y} L${x} ${y + s}`} opacity={o} />
+const chevR = (x: number, y: number, s = 1.4, o = 0.55) => (
+  <path d={`M${x} ${y - s} L${x + s} ${y} L${x} ${y + s}`} opacity={o} style={ve} />
 );
-const chevD = (x: number, y: number, s = 1.6, o = 0.7) => (
-  <path d={`M${x - s} ${y - s * 0.6} L${x} ${y + s * 0.6} L${x + s} ${y - s * 0.6}`} opacity={o} />
+const chevD = (x: number, y: number, s = 1.2, o = 0.6) => (
+  <path d={`M${x - s} ${y - s * 0.55} L${x} ${y + s * 0.55} L${x + s} ${y - s * 0.55}`} opacity={o} style={ve} />
 );
 
 type Group = "Structure" | "Text" | "Media" | "Collections" | "Interactive" | "Wayfinding";
@@ -84,379 +87,389 @@ type Entry = { name: string; group: Group; h: number; el: React.ReactNode };
 
 export const GLYPH_GROUPS: Group[] = ["Structure", "Text", "Media", "Collections", "Interactive", "Wayfinding"];
 
-/** Column geometry for an n-across grid inside the content width. */
-const cols = (n: number, gap = 2.5) => {
+const cols = (n: number, gap = GAP) => {
   const w = (W - gap * (n - 1)) / n;
   return { w, x: (i: number) => M + i * (w + gap) };
 };
 
 export const GLYPHS: Record<GlyphId, Entry> = {
   /* ---------------- Structure ---------------- */
-  hero: { name: "Hero", group: "Structure", h: 38, el: G(38, <g transform="translate(0 3)">
-    {line(M, 9, 40, 0.9, 2.4)}
-    {line(M, 14, 28, 0.9, 2.4)}
-    {para(M, 19, 42, 2, 3.2, 0.45)}
-    {solid(M, 25, 17, 4.5, 2.25)}
-  </g>) },
-  herosplit: { name: "Hero, split", group: "Structure", h: 36, el: G(36, <g transform="translate(0 3)">
-    {line(M, 8, 26, 0.9, 2.4)}
-    {line(M, 13, 18, 0.9, 2.4)}
-    {para(M, 18, 27, 2, 3.2, 0.45)}
-    {solid(M, 24, 15, 4.2, 2.1)}
-    {pic(39, 4, 28, 22, 2)}
-  </g>) },
-  banner: { name: "Notice bar", group: "Structure", h: 12, el: G(12, <g transform="translate(0 1)">
-    {soft(M, 2, W, 6, 3)}
-    {dot(M + 3.5, 5, 1.4, 0.75)}
-    {line(M + 8, 5, 34, 0.6)}
-    <path d="M62 3.4l3.2 3.2M65.2 3.4l-3.2 3.2" opacity="0.6" />
-  </g>) },
-  tabs: { name: "Tabs", group: "Structure", h: 31, el: G(31, <g transform="translate(0 2.5)">
-    {solid(M, 3, 15, 4.5, 2.25, 0.85)}
-    {box(M + 17, 3, 15, 4.5, 2.25, 0.45)}
-    {box(M + 34, 3, 15, 4.5, 2.25, 0.45)}
-    {line(M, 11, W, 0.28)}
-    {line(M, 15, 26, 0.75, 1.8)}
-    {para(M, 19.5, W, 2, 3.2, 0.45)}
-  </g>) },
-  sidebar: { name: "Content + sidebar", group: "Structure", h: 35, el: G(35, <g transform="translate(0 2.5)">
-    {box(M, 3, 17, 24, 2, 0.4)}
-    {line(M + 3, 8, 11, 0.5)}{line(M + 3, 12, 9, 0.5)}{line(M + 3, 16, 11, 0.5)}{line(M + 3, 20, 8, 0.5)}
-    {line(26, 5, 28, 0.85, 2.2)}
-    {para(26, 11, 40, 5, 3.4, 0.45)}
-  </g>) },
-  breadcrumb: { name: "Breadcrumb", group: "Structure", h: 10, el: G(10, <g transform="translate(0 1)">
-    {line(M, 4, 9, 0.45)}
-    {chevR(17, 4, 1.4, 0.45)}
-    {line(21, 4, 11, 0.45)}
-    {chevR(35, 4, 1.4, 0.45)}
-    {line(39, 4, 15, 0.85, 1.6)}
-  </g>) },
-  footercols: { name: "Footer columns", group: "Structure", h: 31, el: G(31, <g transform="translate(0 2.5)">
+  hero: { name: "Hero", group: "Structure", h: 24, el: G(24, <>
+    {head(M, I, 30)}
+    {head(M, I + 3.5, 20)}
+    {para(M, I + 8.5, 34, 2)}
+    {solid(M, I + 15.5, 11, 2.5, 1.2)}
+  </>) },
+  herosplit: { name: "Hero, split", group: "Structure", h: 24, el: G(24, <>
+    {head(M, I, 18)}
+    {head(M, I + 3.5, 12)}
+    {para(M, I + 8.5, 20, 2)}
+    {solid(M, I + 15.5, 10, 2.5, 1.2)}
+    {pic(M + 28, I, W - 28, 16)}
+  </>) },
+  banner: { name: "Notice bar", group: "Structure", h: 12, el: G(12, <>
+    {box(M, I, W, 4, 2, 0.45)}
+    {dot(M + 2.5, I + 2, 0.9, 0.7)}
+    {line(M + 6, I + 2, 34, 0.5)}
+    <path d={`M${72 - I - 4.5} ${I + 0.7}l2.4 2.4M${72 - I - 2.1} ${I + 0.7}l-2.4 2.4`} opacity="0.5" style={ve} />
+  </>) },
+  tabs: { name: "Tabs", group: "Structure", h: 22, el: G(22, <>
+    {solid(M, I, 11, 2.8, 1.4, 0.8)}
+    {box(M + 14, I, 11, 2.8, 1.4, 0.45)}
+    {box(M + 28, I, 11, 2.8, 1.4, 0.45)}
+    {line(M, I + 5.5, W, 0.3)}
+    {head(M, I + 9, 18)}
+    {para(M, I + 13, W, 2)}
+  </>) },
+  sidebar: { name: "Content + sidebar", group: "Structure", h: 24, el: G(24, <>
+    {box(M, I, 13, 16, 1, 0.45)}
+    {line(M + 2, I + 3, 9, 0.45)}{line(M + 2, I + 6.5, 7, 0.45)}
+    {line(M + 2, I + 10, 9, 0.45)}{line(M + 2, I + 13.5, 6, 0.45)}
+    {head(M + 20, I + 1, 22)}
+    {para(M + 20, I + 6, 38, 4)}
+  </>) },
+  breadcrumb: { name: "Breadcrumb", group: "Structure", h: 10, el: G(10, <>
+    {line(M, 5, 8, 0.4)}
+    {chevR(M + 10, 5, 1.1, 0.4)}
+    {line(M + 13.5, 5, 10, 0.4)}
+    {chevR(M + 25.5, 5, 1.1, 0.4)}
+    {line(M + 29, 5, 12, 0.75)}
+  </>) },
+  footercols: { name: "Footer columns", group: "Structure", h: 22, el: G(22, <>
     {[0, 1, 2, 3].map(i => {
-      const c = cols(4, 3);
+      const c = cols(4);
       return (
         <g key={i}>
-          {line(c.x(i), 5, c.w * 0.7, 0.8, 1.6)}
-          {line(c.x(i), 10, c.w * 0.9, 0.42)}{line(c.x(i), 14, c.w * 0.65, 0.42)}{line(c.x(i), 18, c.w * 0.8, 0.42)}
+          {head(c.x(i), I, c.w * 0.65)}
+          {line(c.x(i), I + 5, c.w * 0.9, 0.4)}
+          {line(c.x(i), I + 8.5, c.w * 0.6, 0.4)}
+          {line(c.x(i), I + 12, c.w * 0.75, 0.4)}
         </g>
       );
     })}
-    {line(M, 23, W, 0.25)}
-  </g>) },
+    {line(M, 22 - I, W, 0.25)}
+  </>) },
 
   /* ---------------- Text ---------------- */
-  textrows: { name: "Text rows", group: "Text", h: 26, el: G(26, <g transform="translate(0 3)">
-    {para(M, 4, W, 5, 3.2, 0.55)}
-  </g>) },
-  text2col: { name: "Two column text", group: "Text", h: 28, el: G(28, <g transform="translate(0 3)">
-    {para(M, 4, 28, 5, 3.4, 0.55)}
-    {para(39, 4, 28, 5, 3.4, 0.55)}
-  </g>) },
-  article: { name: "Article", group: "Text", h: 34, el: G(34, <g transform="translate(0 3)">
-    {line(M, 5, 42, 0.9, 2.4)}
-    {line(M, 10, 22, 0.45)}
-    {line(M, 14, W, 0.25)}
-    {para(M, 18, W, 3, 3.2, 0.5)}
-  </g>) },
-  quote: { name: "Quote", group: "Text", h: 24, el: G(24, <g transform="translate(0 2)">
-    <path d="M8.4 5c-2.2.8-3.4 2.3-3.4 4.5h3.6v3.9H4.6V9.5C4.6 7 6.1 5.4 8.4 4.4z" fill="currentColor" stroke="none" opacity="0.4" />
-    {line(15, 7, 46, 0.8, 1.8)}
-    {line(15, 11.5, 38, 0.8, 1.8)}
-    {line(15, 16, 20, 0.4)}
-  </g>) },
-  testimonial: { name: "Testimonial", group: "Text", h: 28, el: G(28, <g transform="translate(0 2)">
-    {box(M, 3, W, 18, 2, 0.4)}
-    {ring(13, 10, 3.6, 0.55)}
-    {para(20, 8, 40, 2, 3.2, 0.5)}
-    {line(20, 17, 15, 0.4)}
-  </g>) },
+  textrows: { name: "Text rows", group: "Text", h: 20, el: G(20, <>
+    {para(M, I, W, 5)}
+  </>) },
+  text2col: { name: "Two column text", group: "Text", h: 20, el: G(20, <>
+    {para(M, I, (W - GAP) / 2, 5)}
+    {para(M + (W - GAP) / 2 + GAP, I, (W - GAP) / 2, 5)}
+  </>) },
+  article: { name: "Article", group: "Text", h: 22, el: G(22, <>
+    {head(M, I, 32)}
+    {line(M, I + 4.5, 14, 0.4)}
+    {line(M, I + 8, W, 0.25)}
+    {para(M, I + 11.5, W, 3)}
+  </>) },
+  quote: { name: "Quote", group: "Text", h: 16, el: G(16, <>
+    <path d={`M${M + 2.5} ${I}c-1.5.6-2.3 1.6-2.3 3.1h2.5v2.5H${M} V${I + 3.1}C${M} ${I + 1.4} ${M + 1.1} ${I + 0.3} ${M + 2.5} ${I - 0.1}z`}
+          fill="currentColor" stroke="none" opacity="0.35" />
+    {head(M + 9, I + 2, 40)}
+    {head(M + 9, I + 5.5, 32)}
+    {line(M + 9, I + 9, 12, 0.4)}
+  </>) },
+  testimonial: { name: "Testimonial", group: "Text", h: 18, el: G(18, <>
+    {box(M, I, W, 10, 1, 0.45)}
+    {ring(M + 6, I + 5, 2.2, 0.5)}
+    {para(M + 12, I + 3, 40, 2, 2.8)}
+    {line(M + 12, I + 9.5, 12, 0.4)}
+  </>) },
 
   /* ---------------- Media ---------------- */
-  image: { name: "Image", group: "Media", h: 32, el: G(32, <g transform="translate(0 2)">
-    {pic(M, 3, W, 18, 2)}
-    {line(M, 25, 28, 0.4)}
-  </g>) },
-  video: { name: "Video", group: "Media", h: 32, el: G(32, <g transform="translate(0 2)">
-    {box(M, 3, W, 22, 2, 0.42)}
-    {ring(36, 14, 5, 0.6)}
-    <path d="M34.4 11.4l3.8 2.6-3.8 2.6z" fill="currentColor" stroke="none" opacity="0.85" />
-  </g>) },
-  gallery: { name: "Gallery", group: "Media", h: 30, el: G(30, <g transform="translate(0 2)">
-    {pic(M, 3, 29, 20, 2)}
-    {pic(37, 3, 30, 9, 2)}
-    {pic(37, 14, 30, 9, 2)}
-  </g>) },
-  logos: { name: "Logo strip", group: "Media", h: 15, el: G(15, <g transform="translate(0 1.5)">
+  image: { name: "Image", group: "Media", h: 22, el: G(22, <>
+    {pic(M, I, W, 12)}
+    {line(M, I + 14.5, 20, 0.4)}
+  </>) },
+  video: { name: "Video", group: "Media", h: 20, el: G(20, <>
+    {box(M, I, W, 12, 1, 0.5)}
+    {ring(36, I + 6, 3, 0.55)}
+    <path d={`M35.2 ${I + 4.5}l2.4 1.5-2.4 1.5z`} fill="currentColor" stroke="none" opacity="0.8" />
+  </>) },
+  gallery: { name: "Gallery", group: "Media", h: 20, el: G(20, <>
+    {pic(M, I, (W - GAP) * 0.55, 12)}
+    {pic(M + (W - GAP) * 0.55 + GAP, I, (W - GAP) * 0.45, 5)}
+    {pic(M + (W - GAP) * 0.55 + GAP, I + 7, (W - GAP) * 0.45, 5)}
+  </>) },
+  logos: { name: "Logo strip", group: "Media", h: 12, el: G(12, <>
     {[0, 1, 2, 3, 4].map(i => {
-      const c = cols(5, 3);
-      return <rect key={i} x={c.x(i)} y="4" width={c.w} height="4.5" rx="1.5" opacity="0.42" />;
+      const c = cols(5);
+      return <g key={i}>{box(c.x(i), I, c.w, 4, 1, 0.45)}</g>;
     })}
-  </g>) },
-  split: { name: "Media + text", group: "Media", h: 32, el: G(32, <g transform="translate(0 2)">
-    {pic(M, 3, 27, 22, 2)}
-    {line(37, 6, 26, 0.85, 2.2)}
-    {para(37, 12, 28, 2, 3.2, 0.45)}
-    {solid(37, 20, 15, 4.2, 2.1)}
-  </g>) },
+  </>) },
+  split: { name: "Media + text", group: "Media", h: 22, el: G(22, <>
+    {pic(M, I, 22, 14)}
+    {head(M + 30, I + 1, 22)}
+    {para(M + 30, I + 6, 28, 2)}
+    {solid(M + 30, I + 13, 10, 2.5, 1.2)}
+  </>) },
 
   /* ---------------- Collections ---------------- */
-  cards3: { name: "Three cards", group: "Collections", h: 33, el: G(33, <g transform="translate(0 2.5)">
-    {line(M, 4, 24, 0.8, 1.8)}
+  cards3: { name: "Three cards", group: "Collections", h: 22, el: G(22, <>
+    {head(M, I, 16)}
     {[0, 1, 2].map(i => {
       const c = cols(3);
       return (
         <g key={i}>
-          {box(c.x(i), 9, c.w, 16, 2, 0.45)}
-          {line(c.x(i) + 2, 19, c.w - 4, 0.45)}
-          {line(c.x(i) + 2, 22, c.w - 8, 0.35)}
+          {box(c.x(i), I + 5.5, c.w, 9, 1, 0.5)}
+          {line(c.x(i) + 1.5, I + 11, c.w - 3, 0.45)}
+          {line(c.x(i) + 1.5, I + 13.2, c.w - 5, 0.35)}
         </g>
       );
     })}
-  </g>) },
-  cards4: { name: "Four cards", group: "Collections", h: 28, el: G(28, <g transform="translate(0 2)">
+  </>) },
+  cards4: { name: "Four cards", group: "Collections", h: 18, el: G(18, <>
     {[0, 1, 2, 3].map(i => {
-      const c = cols(4, 2);
+      const c = cols(4);
       return (
         <g key={i}>
-          {box(c.x(i), 3, c.w, 18, 2, 0.45)}
-          {line(c.x(i) + 1.5, 15, c.w - 3, 0.45)}
-          {line(c.x(i) + 1.5, 18, c.w - 6, 0.35)}
+          {box(c.x(i), I, c.w, 10, 1, 0.5)}
+          {line(c.x(i) + 1, I + 7, c.w - 2, 0.45)}
+          {line(c.x(i) + 1, I + 9.5, c.w - 3.5, 0.35)}
         </g>
       );
     })}
-  </g>) },
-  grid2x2: { name: "Feature grid", group: "Collections", h: 31, el: G(31, <g transform="translate(0 2.5)">
-    {[0, 1].map(r => [0, 1].map(i => {
-      const c = cols(2, 3);
-      const y = 3 + r * 11;
+  </>) },
+  grid2x2: { name: "Feature grid", group: "Collections", h: 24, el: G(24, <>
+    {[0, 1].flatMap(r => [0, 1].map(i => {
+      const c = cols(2);
+      const y = I + r * (6 + GAP);
       return (
         <g key={`${r}-${i}`}>
-          {box(c.x(i), y, c.w, 9, 2, 0.42)}
-          {dot(c.x(i) + 4, y + 4.5, 1.6, 0.7)}
-          {line(c.x(i) + 8, y + 3.4, c.w - 12, 0.5)}
-          {line(c.x(i) + 8, y + 6.4, c.w - 17, 0.35)}
+          {box(c.x(i), y, c.w, 6, 1, 0.45)}
+          {dot(c.x(i) + 2.5, y + 3, 1, 0.65)}
+          {line(c.x(i) + 5.5, y + 2.2, c.w - 9, 0.5)}
+          {line(c.x(i) + 5.5, y + 4.2, c.w - 12, 0.35)}
         </g>
       );
     }))}
-  </g>) },
-  people: { name: "People cards", group: "Collections", h: 32, el: G(32, <g transform="translate(0 2)">
+  </>) },
+  people: { name: "People cards", group: "Collections", h: 22, el: G(22, <>
     {[0, 1, 2].map(i => {
       const c = cols(3);
       return (
         <g key={i}>
-          {box(c.x(i), 3, c.w, 21, 2, 0.45)}
-          {ring(c.x(i) + c.w / 2, 10, 3.8, 0.6)}
-          {line(c.x(i) + 2.5, 17.5, c.w - 5, 0.5)}
-          {line(c.x(i) + 4.5, 20.5, c.w - 9, 0.35)}
+          {box(c.x(i), I, c.w, 14, 1, 0.5)}
+          {ring(c.x(i) + c.w / 2, I + 4.5, 2.2, 0.55)}
+          {line(c.x(i) + 2, I + 9.5, c.w - 4, 0.5)}
+          {line(c.x(i) + 3, I + 12, c.w - 6, 0.35)}
         </g>
       );
     })}
-  </g>) },
-  carousel: { name: "Carousel", group: "Collections", h: 30, el: G(30, <g transform="translate(0 2)">
-    {chevL(4, 12, 2, 0.6)}
-    {box(10, 3, 24, 17, 2, 0.45)}{line(12.5, 15, 17, 0.42)}
-    {box(37, 3, 24, 17, 2, 0.45)}{line(39.5, 15, 17, 0.42)}
-    {chevR(66, 12, 2, 0.6)}
-    {[0, 1, 2].map(i => <circle key={i} cx={33 + i * 3} cy="23" r="0.9" fill="currentColor" stroke="none" opacity={i === 0 ? 0.9 : 0.3} />)}
-  </g>) },
-  related: { name: "Related content", group: "Collections", h: 31, el: G(31, <g transform="translate(0 2.5)">
-    {line(M, 4, 22, 0.8, 1.8)}
+  </>) },
+  carousel: { name: "Carousel", group: "Collections", h: 20, el: G(20, <>
+    {chevL(M, I + 5, 1.3, 0.5)}
+    {box(M + 5, I, 22, 10, 1, 0.5)}{line(M + 7, I + 7.5, 14, 0.4)}
+    {box(M + 33, I, 22, 10, 1, 0.5)}{line(M + 35, I + 7.5, 14, 0.4)}
+    {chevR(72 - I - 1.3, I + 5, 1.3, 0.5)}
+    {[0, 1, 2].map(i => <circle key={i} cx={33 + i * 3} cy={20 - I} r="0.6" fill="currentColor" stroke="none" opacity={i === 0 ? 0.85 : 0.3} />)}
+  </>) },
+  related: { name: "Related content", group: "Collections", h: 22, el: G(22, <>
+    {head(M, I, 14)}
     {[0, 1, 2].map(i => {
       const c = cols(3);
       return (
         <g key={i}>
-          {box(c.x(i), 9, c.w, 9, 2, 0.42)}
-          {line(c.x(i), 21, c.w * 0.9, 0.45)}
-          {line(c.x(i), 24, c.w * 0.6, 0.3)}
+          {box(c.x(i), I + 5.5, c.w, 6, 1, 0.45)}
+          {line(c.x(i), I + 13.5, c.w * 0.85, 0.45)}
+          {line(c.x(i), I + 16, c.w * 0.5, 0.3)}
         </g>
       );
     })}
-  </g>) },
-  listrows: { name: "Listing rows", group: "Collections", h: 33, el: G(33, <g transform="translate(0 2.5)">
+  </>) },
+  listrows: { name: "Listing rows", group: "Collections", h: 32, el: G(32, <>
     {[0, 1, 2].map(i => {
-      const y = 3 + i * 8.4;
+      const y = I + i * (5 + GAP);
       return (
         <g key={i}>
-          {box(M, y, W, 7, 1.5, 0.4)}
-          {soft(M + 1.5, y + 1.2, 7, 4.6, 1)}
-          {line(M + 11, y + 2.6, 22, 0.6)}
-          {line(M + 11, y + 5, 30, 0.35)}
-          {solid(56, y + 2, 9, 3.2, 1.6, 0.85)}
+          {box(M, y, W, 5, 1, 0.45)}
+          {box(M + 1.5, y + 1, 4, 3, 0.6, 0.4)}
+          {line(M + 8, y + 1.6, 18, 0.55)}
+          {line(M + 8, y + 3.4, 26, 0.35)}
+          {solid(72 - I - 7, y + 1.3, 6.5, 2.4, 1.2, 0.8)}
         </g>
       );
     })}
-  </g>) },
-  table: { name: "Table", group: "Collections", h: 30, el: G(30, <g transform="translate(0 2)">
-    {soft(M, 3, W, 5, 1.5, 0.2)}
-    {[0, 1, 2].map(i => <line key={i} x1={M + 2 + i * 20} y1="5.5" x2={M + 14 + i * 20} y2="5.5" opacity="0.8" strokeWidth="1.4" />)}
+  </>) },
+  table: { name: "Table", group: "Collections", h: 20, el: G(20, <>
+    {box(M, I, W, 3.2, 0.8, 0.35)}
+    {[0, 1, 2].map(i => <line key={i} x1={M + 2 + i * 18} y1={I + 1.6} x2={M + 11 + i * 18} y2={I + 1.6} opacity="0.7" style={ve} />)}
     {[0, 1, 2, 3].map(r => (
       <g key={r}>
-        {[0, 1, 2].map(i => <line key={i} x1={M + 2 + i * 20} y1={11.5 + r * 4.2} x2={M + (i === 0 ? 16 : 12) + i * 20} y2={11.5 + r * 4.2} opacity="0.4" />)}
+        {[0, 1, 2].map(i => <line key={i} x1={M + 2 + i * 18} y1={I + 5.5 + r * 2.5} x2={M + (i === 0 ? 12 : 9) + i * 18} y2={I + 5.5 + r * 2.5} opacity="0.4" style={ve} />)}
       </g>
     ))}
-    <g opacity="0.22">
-      <line x1="24" y1="3" x2="24" y2="25" /><line x1="44" y1="3" x2="44" y2="25" />
+    <g opacity="0.2">
+      <line x1="26" y1={I} x2="26" y2={20 - I} style={ve} /><line x1="44" y1={I} x2="44" y2={20 - I} style={ve} />
     </g>
-  </g>) },
-  pricing: { name: "Pricing", group: "Collections", h: 34, el: G(34, <g transform="translate(0 2)">
+  </>) },
+  pricing: { name: "Pricing", group: "Collections", h: 24, el: G(24, <>
     {[0, 1, 2].map(i => {
       const c = cols(3);
       const mid = i === 1;
-      const y = mid ? 2 : 5;
-      const h = mid ? 25 : 20;
+      const y = mid ? I : I + 2;
+      const h = mid ? 16 : 12;
       return (
         <g key={i}>
-          {box(c.x(i), y, c.w, h, 2, mid ? 0.7 : 0.4)}
-          {line(c.x(i) + 2.5, y + 4, c.w - 9, 0.4)}
-          {line(c.x(i) + 2.5, y + 8.5, c.w - 6, 0.9, 2.4)}
-          {line(c.x(i) + 2.5, y + 13, c.w - 5, 0.35)}
-          {mid ? solid(c.x(i) + 2.5, y + 18, c.w - 5, 4, 2)
-               : box(c.x(i) + 2.5, y + 15, c.w - 5, 3.6, 1.8, 0.45)}
+          {box(c.x(i), y, c.w, h, 1, mid ? 0.65 : 0.45)}
+          {line(c.x(i) + 1.5, y + 2.5, c.w - 5, 0.4)}
+          {head(c.x(i) + 1.5, y + 5.5, c.w - 4)}
+          {line(c.x(i) + 1.5, y + 8.5, c.w - 3, 0.35)}
+          {mid ? solid(c.x(i) + 1.5, y + 11.5, c.w - 3, 2.5, 1.2)
+               : box(c.x(i) + 1.5, y + 10.5, c.w - 3, 2.2, 1, 0.45)}
         </g>
       );
     })}
-  </g>) },
+  </>) },
 
   /* ---------------- Interactive ---------------- */
-  search: { name: "Search", group: "Interactive", h: 15, el: G(15, <g transform="translate(0 1.5)">
-    {box(M, 3, 48, 7, 3.5, 0.5)}
-    {ring(10.5, 6.5, 2, 0.6)}
-    <path d="M12 8l1.6 1.6" opacity="0.6" />
-    {line(16.5, 6.5, 22, 0.35)}
-    {solid(56, 3, 11, 7, 3.5)}
-  </g>) },
-  filters: { name: "Filters + results", group: "Interactive", h: 35, el: G(35, <g transform="translate(0 2.5)">
-    {box(M, 3, 17, 24, 2, 0.4)}
+  search: { name: "Search", group: "Interactive", h: 12, el: G(12, <>
+    {ring(M + 1.5, I + 2, 1.4, 0.55)}
+    <path d={`M${M + 2.6} ${I + 3.1}l1.2 1.2`} opacity="0.55" style={ve} />
+    {box(M + 7, I, 38, 4, 2, 0.5)}
+    {line(M + 10, I + 2, 22, 0.3)}
+    {solid(72 - I - 11, I, 11, 4, 2)}
+  </>) },
+  filters: { name: "Filters + results", group: "Interactive", h: 26, el: G(26, <>
+    {box(M, I, 12, 18, 1, 0.45)}
     {[0, 1, 2, 3].map(i => (
       <g key={i}>
-        {i === 0 ? solid(M + 2.5, 6.5 + i * 5.2, 2.8, 2.8, 0.8)
-                 : box(M + 2.5, 6.5 + i * 5.2, 2.8, 2.8, 0.8, 0.5)}
-        {line(M + 7, 8 + i * 5.2, 8.5, 0.45)}
+        {i === 0 ? solid(M + 2, I + 2.5 + i * 4, 2, 2, 0.5)
+                 : box(M + 2, I + 2.5 + i * 4, 2, 2, 0.5, 0.5)}
+        {line(M + 5.5, I + 3.5 + i * 4, 5.5, 0.45)}
       </g>
     ))}
-    {[0, 1, 2].map(i => (
-      <g key={i}>
-        {box(26, 3 + i * 8.4, 41, 7, 1.5, 0.42)}
-        {line(28.5, 5.4 + i * 8.4, 18, 0.6)}
-        {line(28.5, 7.8 + i * 8.4, 28, 0.35)}
-      </g>
-    ))}
-  </g>) },
-  form: { name: "Form / sign-up", group: "Interactive", h: 35, el: G(35, <g transform="translate(0 2.5)">
+    {[0, 1, 2].map(i => {
+      const y = I + i * 6.5;
+      return (
+        <g key={i}>
+          {box(M + 18, y, W - 18, 4.5, 1, 0.45)}
+          {line(M + 20, y + 1.5, 14, 0.55)}
+          {line(M + 20, y + 3, 24, 0.35)}
+        </g>
+      );
+    })}
+  </>) },
+  form: { name: "Form / sign-up", group: "Interactive", h: 24, el: G(24, <>
     {[0, 1].map(i => (
       <g key={i}>
-        {line(M, 5 + i * 10, 11, 0.4)}
-        {box(M, 7.5 + i * 10, 28, 6, 1.8, 0.5)}
+        {line(M, I + i * 7.5, 8, 0.4)}
+        {box(M, I + 2 + i * 7.5, 24, 3.5, 1, 0.5)}
       </g>
     ))}
-    {line(38, 5, 13, 0.4)}
-    {box(38, 7.5, 29, 6, 1.8, 0.5)}
-    {box(38, 18, 3, 3, 0.8, 0.5)}
-    {line(43, 19.5, 20, 0.4)}
-    {solid(38, 23, 18, 5, 2.5)}
-  </g>) },
-  cta: { name: "CTA banner", group: "Interactive", h: 22, el: G(22, <g transform="translate(0 2)">
-    {soft(M, 2, W, 14, 2.5, 0.12)}
-    {line(M + 4, 7, 30, 0.85, 2.2)}
-    {line(M + 4, 12, 24, 0.4)}
-    {solid(47, 6, 18, 6, 3)}
-  </g>) },
-  accordion: { name: "Accordion", group: "Interactive", h: 29, el: G(29, <g transform="translate(0 2.5)">
-    {box(M, 3, W, 6.5, 1.8, 0.55)}
-    {line(M + 2.5, 6.2, 24, 0.65)}
-    {chevD(63, 5.6, 1.5, 0.75)}
-    {para(M + 2.5, 13, 46, 2, 3, 0.4)}
-    {box(M, 19, W, 4.5, 1.8, 0.35)}
-    {line(M + 2.5, 21.2, 20, 0.4)}
-  </g>) },
-  steps: { name: "Process steps", group: "Interactive", h: 22, el: G(22, <g transform="translate(0 2)">
-    <line x1="12" y1="7" x2="60" y2="7" opacity="0.25" />
+    {line(M + 30, I, 10, 0.4)}
+    {box(M + 30, I + 2, 26, 3.5, 1, 0.5)}
+    {box(M + 30, I + 9, 2, 2, 0.5, 0.5)}
+    {line(M + 34, I + 10, 16, 0.4)}
+    {solid(M + 30, I + 13.5, 12, 3, 1.5)}
+  </>) },
+  cta: { name: "CTA banner", group: "Interactive", h: 14, el: G(14, <>
+    {box(M, I, W, 6, 1.5, 0.3)}
+    {head(M + 3, I + 2, 22)}
+    {line(M + 3, I + 4.5, 16, 0.4)}
+    {solid(72 - I - 12, I + 1.5, 11, 3, 1.5)}
+  </>) },
+  accordion: { name: "Accordion", group: "Interactive", h: 20, el: G(20, <>
+    {box(M, I, W, 4, 1, 0.55)}
+    {line(M + 2, I + 2, 18, 0.6)}
+    {chevD(72 - I - 3.5, I + 1.8, 1.1, 0.65)}
+    {para(M + 2, I + 7, 42, 2, 2.8)}
+    {box(M, I + 13, W, 3, 1, 0.4)}
+    {line(M + 2, I + 14.5, 14, 0.4)}
+  </>) },
+  steps: { name: "Process steps", group: "Interactive", h: 16, el: G(16, <>
+    <line x1={M + 4} y1={I + 2} x2={72 - I - 4} y2={I + 2} opacity="0.25" style={ve} />
     {[0, 1, 2, 3].map(i => {
-      const cx = 12 + i * 16;
+      const cx = M + 4 + i * ((W - 8) / 3);
       return (
         <g key={i}>
-          {i === 0 ? dot(cx, 7, 3, 0.9) : <circle cx={cx} cy="7" r="3" fill="none" opacity="0.45" />}
-          {line(cx - 5.5, 13, 11, 0.4)}
-          {line(cx - 3.5, 16, 7, 0.28)}
+          {i === 0 ? dot(cx, I + 2, 1.6, 0.85) : <circle cx={cx} cy={I + 2} r="1.6" fill="none" opacity="0.45" style={ve} />}
+          {line(cx - 3.5, I + 6, 7, 0.4)}
+          {line(cx - 2.5, I + 8.5, 5, 0.3)}
         </g>
       );
     })}
-  </g>) },
-  toggle: { name: "Toggle / compare", group: "Interactive", h: 15, el: G(15, <g transform="translate(0 1.5)">
-    {line(M, 6, 13, 0.4)}
-    {box(25, 2.5, 21, 7, 3.5, 0.5)}
-    {solid(26, 3.5, 9, 5, 2.5)}
-    {line(50, 6, 17, 0.4)}
-  </g>) },
+  </>) },
+  toggle: { name: "Toggle / compare", group: "Interactive", h: 12, el: G(12, <>
+    {line(M, I + 2, 9, 0.4)}
+    {box(M + 14, I, 16, 4, 2, 0.5)}
+    {solid(M + 15, I + 0.7, 6.5, 2.6, 1.3)}
+    {line(M + 34, I + 2, 14, 0.4)}
+  </>) },
 
   /* ---------------- Wayfinding ---------------- */
-  links: { name: "Link list", group: "Wayfinding", h: 27, el: G(27, <g transform="translate(0 2.5)">
-    {line(M, 4, 20, 0.8, 1.8)}
+  links: { name: "Link list", group: "Wayfinding", h: 20, el: G(20, <>
+    {head(M, I, 12)}
     {[0, 1, 2, 3].map(i => (
       <g key={i}>
-        {dot(M + 1, 10 + i * 4, 0.9, 0.8)}
-        {line(M + 4.5, 10 + i * 4, [42, 50, 34, 45][i], 0.45)}
+        {dot(M + 1, I + 5.5 + i * 2.8, 0.6, 0.7)}
+        {line(M + 4, I + 5.5 + i * 2.8, [36, 44, 28, 40][i], 0.45)}
       </g>
     ))}
-  </g>) },
-  linker: { name: "Prev / next", group: "Wayfinding", h: 17, el: G(17, <g transform="translate(0 1.5)">
-    {box(M, 3, 28, 8, 2, 0.42)}
-    {chevL(8.5, 7, 1.6, 0.6)}
-    {line(13, 5.5, 7, 0.35)}{line(13, 8.5, 15, 0.5)}
-    {box(39, 3, 28, 8, 2, 0.42)}
-    {line(43, 5.5, 7, 0.35)}{line(43, 8.5, 15, 0.5)}
-    {chevR(63.5, 7, 1.6, 0.6)}
-  </g>) },
-  map: { name: "Map / locations", group: "Wayfinding", h: 32, el: G(32, <g transform="translate(0 2)">
-    {box(M, 3, 38, 22, 2, 0.42)}
-    <g opacity="0.28">
-      <path d="M5 13 L18 8 L30 15 L43 9" /><path d="M5 20 L16 17 L28 23 L43 18" />
+  </>) },
+  linker: { name: "Prev / next", group: "Wayfinding", h: 14, el: G(14, <>
+    {box(M, I, 26, 6, 1, 0.45)}
+    {chevL(M + 3, I + 3, 1.2, 0.55)}
+    {line(M + 6.5, I + 1.8, 5, 0.35)}{line(M + 6.5, I + 4, 12, 0.5)}
+    {box(M + 34, I, 26, 6, 1, 0.45)}
+    {line(M + 37.5, I + 1.8, 5, 0.35)}{line(M + 37.5, I + 4, 12, 0.5)}
+    {chevR(72 - I - 3, I + 3, 1.2, 0.55)}
+  </>) },
+  map: { name: "Map / locations", group: "Wayfinding", h: 20, el: G(20, <>
+    {box(M, I, 34, 12, 1, 0.5)}
+    <g opacity="0.25">
+      <path d={`M${M} ${I + 5} L${M + 11} ${I + 2} L${M + 20} ${I + 8} L${M + 34} ${I + 3}`} style={ve} />
+      <path d={`M${M} ${I + 9} L${M + 10} ${I + 7.5} L${M + 20} ${I + 11} L${M + 34} ${I + 8.5}`} style={ve} />
     </g>
-    <path d="M23 9c2.3 0 4 1.8 4 3.9 0 2.3-4 5.6-4 5.6s-4-3.3-4-5.6c0-2.1 1.7-3.9 4-3.9z"
-          fill="currentColor" stroke="none" opacity="0.9" />
+    <path d={`M${M + 16} ${I + 3}c1.5 0 2.6 1.2 2.6 2.6 0 1.5-2.6 3.8-2.6 3.8s-2.6-2.3-2.6-3.8c0-1.4 1.1-2.6 2.6-2.6z`}
+          fill="currentColor" stroke="none" opacity="0.85" />
     {[0, 1, 2].map(i => (
       <g key={i}>
-        {line(47, 5 + i * 7.5, 14, 0.6)}
-        {line(47, 8.5 + i * 7.5, 19, 0.35)}
+        {line(M + 38, I + 1.5 + i * 4, 12, 0.55)}
+        {line(M + 38, I + 3.5 + i * 4, 16, 0.35)}
       </g>
     ))}
-  </g>) },
-  contact: { name: "Contact details", group: "Wayfinding", h: 26, el: G(26, <g transform="translate(0 2)">
-    {box(M, 3, 24, 16, 2, 0.45)}
-    {box(M + 3.5, 7, 17, 10, 1.2, 0.5)}
-    <path d="M8.5 7.5l8.5 5.6 8.5-5.6" opacity="0.5" />
+  </>) },
+  contact: { name: "Contact details", group: "Wayfinding", h: 18, el: G(18, <>
+    {box(M, I, 20, 10, 1, 0.5)}
+    {box(M + 2.5, I + 2.5, 15, 6, 0.8, 0.5)}
+    <path d={`M${M + 4} ${I + 3}l5.5 3.6 5.5-3.6`} opacity="0.45" style={ve} />
     {[0, 1, 2].map(i => (
       <g key={i}>
-        {dot(35, 6 + i * 5.5, 1.3, 0.8)}
-        {line(38.5, 6 + i * 5.5, [26, 20, 24][i], 0.45)}
+        {dot(M + 26, I + 2 + i * 3.5, 0.85, 0.7)}
+        {line(M + 29, I + 2 + i * 3.5, [20, 14, 18][i], 0.45)}
       </g>
     ))}
-  </g>) },
-  stats: { name: "Statistics", group: "Wayfinding", h: 26, el: G(26, <g transform="translate(0 2)">
+  </>) },
+  stats: { name: "Statistics", group: "Wayfinding", h: 16, el: G(16, <>
     {[0, 1, 2, 3].map(i => {
-      const c = cols(4, 3);
+      const c = cols(4);
       return (
         <g key={i}>
-          {line(c.x(i), 7, c.w * 0.78, 0.95, 3.2)}
-          {line(c.x(i), 13, c.w, 0.4)}
-          {line(c.x(i), 16.5, c.w * 0.65, 0.3)}
+          {head(c.x(i), I + 1, c.w * 0.7)}
+          {line(c.x(i), I + 5.5, c.w, 0.4)}
+          {line(c.x(i), I + 8, c.w * 0.6, 0.3)}
         </g>
       );
     })}
-    {line(M, 20.5, W, 0.22)}
-  </g>) },
+    {line(M, 16 - I, W, 0.22)}
+  </>) },
 };
 
 export function Glyph({ id }: { id: GlyphId }) {
   return <>{(GLYPHS[id] ?? GLYPHS.textrows).el}</>;
 }
 
-/** A block's wireframe: its elements stacked in order, filling the width. */
-export function Wireframe({ ids, gap = 3 }: { ids: GlyphId[]; gap?: number; accent?: string }) {
+/** A block's wireframe: its elements stacked in order.
+ *  Slightly inset from the block pad so the drawing reads smaller than the chip.
+ *  Soft opaque plate behind the line work so it reads against the intent colour.
+ *  Pass className to replace the default centered width (e.g. mobile detail). */
+export function Wireframe({ ids, gap = GAP, className }: { ids: GlyphId[]; gap?: number; accent?: string; className?: string }) {
   const list = ids?.length ? ids : (["textrows"] as GlyphId[]);
   return (
-    <div className="flex flex-col w-full" style={{ gap }}>
+    <div className={`flex flex-col rounded-md bg-white/20 px-1.5 py-1.5 ${className ?? "w-[86%] mx-auto"}`} style={{ gap }}>
       {list.map((id, i) => <Glyph key={`${id}-${i}`} id={id} />)}
     </div>
   );

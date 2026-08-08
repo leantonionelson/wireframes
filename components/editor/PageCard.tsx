@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { blockStyle, type Page, type Persona } from "@/lib/model";
-import { Wireframe } from "@/lib/glyphs";
+import { BLOCK_GLYPH_PAD, BLOCK_LABEL_PAD, Wireframe } from "@/lib/glyphs";
 import type { Sel } from "./types";
 
 /* ---------- page card on canvas ---------- */
@@ -24,19 +24,18 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
                    onFocus={() => setSel({ pageId: page.id })} onClick={e => e.stopPropagation()} />
           : <div className="w-full text-center font-bold text-[12.5px] text-[var(--accent)] truncate">{page.name}</div>}
       </div>
-      <div className="p-1.5 pt-1 flex flex-col gap-1.5">
+      <div className="p-2 pt-1.5 flex flex-col gap-2">
         {page.blocks.map(b => {
           const c = blockStyle(b, personas);
           const on = sel?.pageId === page.id && sel?.blockId === b.id;
           return (
-            /* The intent colour is the block's tag: a label bar above the
-               wireframe, not a brick behind it. The drawing sits on paper so
-               it reads as layout. */
+            /* Intent colour is the block; glyph is line work on it.
+               Pad matches the SVG inset (BLOCK_*_PAD ↔ I in glyphs.tsx). */
             <div key={b.id} id={`blk-${b.id}`}
                  className={`blk rounded-md overflow-hidden cursor-pointer ${on ? "ring-2 ring-[var(--accent)]" : ""}`}
                  style={{ background: c.bg, color: c.fg }}
                  onClick={e => { e.stopPropagation(); setSel({ pageId: page.id, blockId: b.id }); }}>
-              <div className="flex items-center gap-1 text-[10px] font-semibold leading-tight px-2 pt-1.5 pb-1">
+              <div className={`flex items-center gap-1 text-[10px] font-semibold leading-tight ${BLOCK_LABEL_PAD}`}>
                 <span className="truncate">{b.label}</span>
                 {c.extra.map((col, i) => (
                   <span key={i} className="w-1.5 h-1.5 rounded-full shrink-0 ring-1 ring-white/50" style={{ background: col }} />
@@ -44,7 +43,7 @@ export function PageCard({ page, sel, setSel, rename, addBlock, addChild, person
                 {b.flag && <span title={b.flag} className="ml-auto text-[9px] bg-red-600 text-white rounded px-1">!</span>}
                 {b.comments.length > 0 && <span className="text-[9px] bg-white/25 rounded px-1">{b.comments.length}</span>}
               </div>
-              <div className="px-2 pb-1.5"><Wireframe ids={b.glyphs} gap={3} /></div>
+              <div className={BLOCK_GLYPH_PAD}><Wireframe ids={b.glyphs} /></div>
             </div>
           );
         })}

@@ -552,7 +552,8 @@ export default function Editor({ projectId }: { projectId: string }) {
       )}
 
 
-      {detailPage && <DetailModal page={detailPage} personas={doc.personas} me={me} canEdit={canEdit} addComment={addComment} setPageNote={setPageNote} patchBlock={patchBlock}
+      {detailPage && <DetailModal page={detailPage} pages={doc.pages} onNavigate={setDetailPageId}
+        personas={doc.personas} me={me} canEdit={canEdit} addComment={addComment} setPageNote={setPageNote} patchBlock={patchBlock}
         addBlk={() => mutate(d => { d.pages.find(p => p.id === detailPage.id)!.blocks.push(blankBlock()); return d; })}
         delBlock={bid => deleteBlock(detailPage.id, bid)}
         delPage={() => deletePage(detailPage.id)}

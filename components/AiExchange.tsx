@@ -24,12 +24,12 @@ const ICONS = {
   close: I(<path d="M18 6L6 18M6 6l12 12" />),
 };
 
-export function CopyBtn({ text, label, onCopy, className }: {
-  text: string; label?: string; onCopy?: () => void; className?: string;
+export function CopyBtn({ text, label, onCopy, className, title }: {
+  text: string; label?: string; onCopy?: () => void; className?: string; title?: string;
 }) {
   const [done, setDone] = useState(false);
   return (
-    <button title="Copy"
+    <button title={title ?? (label ? undefined : "Copy")}
       className={className ?? "flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--hover)] text-[11px] shrink-0"}
       onClick={async e => { e.stopPropagation(); await navigator.clipboard.writeText(text); setDone(true); onCopy?.(); setTimeout(() => setDone(false), 1200); }}>
       {done ? ICONS.check : ICONS.copy}{label && <span>{done ? "Copied" : label}</span>}
